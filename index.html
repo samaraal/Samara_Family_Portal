@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#b01264">
+  <meta name="description" content="Secure family portal for authorised relatives of Samara Assisted Living residents.">
+  <title>Samara Family Portal</title>
+  <link rel="icon" href="./assets/samara-logo.png">
+  <link rel="stylesheet" href="./css/style.css">
+</head>
+<body>
+  <div id="app">
+    <section class="login-screen" id="login-screen">
+      <div class="login-shell">
+        <div class="login-brand">
+          <img src="./assets/samara-logo.png" alt="Samara Assisted Living">
+          <span class="eyebrow">Secure Family Access</span>
+          <h1>Stay connected with your loved one.</h1>
+          <p>Authorised family members can view approved care updates, medicines, vitals, bills, documents and visit information.</p>
+
+          <div class="login-benefits">
+            <div><span>♥</span><p><b>Daily Care Updates</b><small>Approved care and wellbeing information</small></p></div>
+            <div><span>⚕</span><p><b>Clinical Summary</b><small>Medicines, vitals and doctor coordination</small></p></div>
+            <div><span>₹</span><p><b>Billing Access</b><small>Bills, receipts and outstanding information</small></p></div>
+          </div>
+        </div>
+
+        <div class="login-card">
+          <span class="eyebrow">Family Login</span>
+          <h2>Welcome back</h2>
+          <p>Use the Patient ID and registered family mobile number.</p>
+
+          <form id="login-form">
+            <label>Patient ID
+              <input name="patient_id" required placeholder="Example: PAT-2026-08-0002">
+            </label>
+            <label>Registered Mobile Number
+              <input name="mobile" required inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
+            </label>
+            <label>Access PIN
+              <input name="pin" required inputmode="numeric" maxlength="6" placeholder="6-digit PIN">
+            </label>
+
+            <button class="btn btn-primary" type="submit">Sign in securely</button>
+            <p class="form-status" id="login-status"></p>
+          </form>
+
+          <div class="demo-box">
+            <b>Demo access</b>
+            <span>Patient ID: PAT-2026-08-0002</span>
+            <span>Mobile: 9841235577</span>
+            <span>PIN: 123456</span>
+          </div>
+
+          <a class="back-link" href="https://samaraassistedliving.com">← Return to Samara website</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="portal-screen hidden" id="portal-screen">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <img src="./assets/samara-logo.png" alt="Samara Assisted Living">
+          <small>Family Portal v1.0.0</small>
+        </div>
+
+        <nav class="side-nav">
+          <button class="active" data-view="overview"><span>⌂</span> Overview</button>
+          <button data-view="care"><span>♥</span> Daily Care</button>
+          <button data-view="medicines"><span>◐</span> Medicines</button>
+          <button data-view="vitals"><span>⌁</span> Vitals</button>
+          <button data-view="physio"><span>⚘</span> Physiotherapy</button>
+          <button data-view="billing"><span>₹</span> Billing</button>
+          <button data-view="documents"><span>▤</span> Documents</button>
+          <button data-view="visits"><span>◷</span> Visit Requests</button>
+          <button data-view="messages"><span>✉</span> Messages</button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <div class="family-user">
+            <span class="avatar">VM</span>
+            <p><b>Vimala</b><small>Authorised Relative</small></p>
+          </div>
+          <button class="signout" id="signout-button">Sign out</button>
+        </div>
+      </aside>
+
+      <div class="portal-main">
+        <header class="portal-header">
+          <button class="mobile-menu" id="mobile-menu">☰</button>
+          <div>
+            <span class="eyebrow">Samara Family Portal</span>
+            <h1 id="page-title">Overview</h1>
+          </div>
+          <div class="header-actions">
+            <button id="refresh-button">↻ Refresh</button>
+            <span class="secure-badge">Secure Access</span>
+          </div>
+        </header>
+
+        <main class="content">
+          <section class="view active" id="view-overview">
+            <div class="resident-banner">
+              <div class="resident-photo">MM</div>
+              <div class="resident-info">
+                <span class="status-pill">Currently at Samara</span>
+                <h2>Mr. Murugan</h2>
+                <p>PAT-2026-08-0002 · Room 102-B · Twin Sharing</p>
+                <small>Admitted on 05-08-2026 · Primary contact: Vimala</small>
+              </div>
+              <div class="condition-card">
+                <span>Current Condition</span>
+                <strong>Stable</strong>
+                <small>Last reviewed today at 9:30 AM</small>
+              </div>
+            </div>
+
+            <div class="metric-grid">
+              <article class="metric-card"><span>Medicines Today</span><strong>4 / 6</strong><small>2 scheduled later</small></article>
+              <article class="metric-card"><span>Daily Care</span><strong>6 / 8</strong><small>2 activities pending</small></article>
+              <article class="metric-card"><span>Latest BP</span><strong>128/82</strong><small>Recorded at 9:10 AM</small></article>
+              <article class="metric-card"><span>Outstanding</span><strong>₹12,500</strong><small>Due by 10-08-2026</small></article>
+            </div>
+
+            <div class="dashboard-grid">
+              <section class="panel">
+                <div class="panel-head"><div><span class="eyebrow">Today</span><h3>Care Timeline</h3></div><button data-open-view="care">View all</button></div>
+                <div class="timeline-list">
+                  <div class="done"><span>07:15 AM</span><p><b>Morning hygiene completed</b><small>Assisted by Caregiver Selvi</small></p></div>
+                  <div class="done"><span>08:00 AM</span><p><b>Breakfast and morning medicines</b><small>Food intake: Good</small></p></div>
+                  <div class="done"><span>09:10 AM</span><p><b>Vitals recorded</b><small>BP 128/82 · Pulse 76 · SpO₂ 98%</small></p></div>
+                  <div class="pending"><span>03:30 PM</span><p><b>Physiotherapy session</b><small>Mobility strengthening</small></p></div>
+                </div>
+              </section>
+
+              <section class="panel">
+                <div class="panel-head"><div><span class="eyebrow">Communication</span><h3>Latest Update</h3></div><button data-open-view="messages">Messages</button></div>
+                <div class="update-card">
+                  <span class="avatar small">NS</span>
+                  <div>
+                    <b>Nurse Shift Update</b>
+                    <small>Today, 10:05 AM</small>
+                    <p>Resident is comfortable and stable. Morning medicines were administered as scheduled. Breakfast intake was good. Physiotherapy is planned for the afternoon.</p>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="view" id="view-care">
+            <div class="section-heading"><div><span class="eyebrow">Daily Care</span><h2>Approved care updates</h2></div><span class="date-chip">06 August 2026</span></div>
+            <div class="table-card">
+              <table>
+                <thead><tr><th>Care Activity</th><th>Shift</th><th>Status</th><th>Completed At</th><th>Remarks</th></tr></thead>
+                <tbody>
+                  <tr><td>Bathing assistance</td><td>Day</td><td><span class="status done">Completed</span></td><td>07:15 AM</td><td>Comfortable</td></tr>
+                  <tr><td>Oral hygiene</td><td>Day</td><td><span class="status done">Completed</span></td><td>07:30 AM</td><td>Completed</td></tr>
+                  <tr><td>Feeding assistance</td><td>Day</td><td><span class="status done">Completed</span></td><td>08:05 AM</td><td>Good intake</td></tr>
+                  <tr><td>Walking / mobility</td><td>Day</td><td><span class="status pending">Pending</span></td><td>—</td><td>Planned after physiotherapy</td></tr>
+                  <tr><td>Fluid intake monitoring</td><td>Both</td><td><span class="status progress">In progress</span></td><td>Ongoing</td><td>650 ml recorded</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="view" id="view-medicines">
+            <div class="section-heading"><div><span class="eyebrow">Medication</span><h2>Current medicines and administration</h2></div><span class="date-chip">Updated today</span></div>
+            <div class="table-card">
+              <table>
+                <thead><tr><th>Medicine</th><th>Strength</th><th>Frequency</th><th>Time</th><th>Food</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td>Tab. Dolo</td><td>650 mg</td><td>BD</td><td>8:00 AM, 8:00 PM</td><td>After food</td><td><span class="status done">Morning given</span></td></tr>
+                  <tr><td>Tab. Pantop</td><td>40 mg</td><td>OD</td><td>7:30 AM</td><td>Before food</td><td><span class="status done">Given</span></td></tr>
+                  <tr><td>Tab. Calcium</td><td>500 mg</td><td>OD</td><td>1:00 PM</td><td>After food</td><td><span class="status pending">Due later</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="notice">Only family-approved medication information is displayed here. Contact the Samara nursing team for clarifications or changes.</div>
+          </section>
+
+          <section class="view" id="view-vitals">
+            <div class="section-heading"><div><span class="eyebrow">Vitals</span><h2>Recent recorded observations</h2></div><span class="date-chip">Last 7 days</span></div>
+            <div class="vital-grid">
+              <article><span>Blood Pressure</span><strong>128/82</strong><small>Normal range</small></article>
+              <article><span>Pulse</span><strong>76 bpm</strong><small>Regular</small></article>
+              <article><span>SpO₂</span><strong>98%</strong><small>Room air</small></article>
+              <article><span>Temperature</span><strong>98.4°F</strong><small>Afebrile</small></article>
+            </div>
+            <div class="table-card">
+              <table>
+                <thead><tr><th>Date & Time</th><th>BP</th><th>Pulse</th><th>SpO₂</th><th>Temperature</th><th>Recorded By</th></tr></thead>
+                <tbody>
+                  <tr><td>06-08-2026 09:10 AM</td><td>128/82</td><td>76</td><td>98%</td><td>98.4°F</td><td>Nurse Nandhini</td></tr>
+                  <tr><td>05-08-2026 07:45 PM</td><td>132/84</td><td>80</td><td>97%</td><td>98.6°F</td><td>Nurse Raji</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="view" id="view-physio">
+            <div class="section-heading"><div><span class="eyebrow">Physiotherapy</span><h2>Mobility and rehabilitation updates</h2></div><span class="date-chip">3 sessions this week</span></div>
+            <div class="panel">
+              <h3>Current Plan</h3>
+              <div class="detail-grid">
+                <div><span>Therapy Type</span><b>Lower-limb strengthening</b></div>
+                <div><span>Frequency</span><b>5 days per week</b></div>
+                <div><span>Next Session</span><b>Today, 3:30 PM</b></div>
+                <div><span>Therapist</span><b>Ms. Priya</b></div>
+              </div>
+            </div>
+            <div class="panel">
+              <h3>Latest Progress Note</h3>
+              <p>Resident completed supported standing and assisted walking exercises. Tolerance was satisfactory. Continue strengthening and balance training.</p>
+            </div>
+          </section>
+
+          <section class="view" id="view-billing">
+            <div class="section-heading"><div><span class="eyebrow">Billing</span><h2>Bills, payments and outstanding amount</h2></div><button class="primary-small">Pay Online – Coming Soon</button></div>
+            <div class="metric-grid billing-metrics">
+              <article class="metric-card"><span>Total Charges</span><strong>₹30,000</strong><small>Current billing period</small></article>
+              <article class="metric-card"><span>Payments</span><strong>₹17,500</strong><small>Received</small></article>
+              <article class="metric-card"><span>Outstanding</span><strong>₹12,500</strong><small>Due by 10-08-2026</small></article>
+            </div>
+            <div class="table-card">
+              <table>
+                <thead><tr><th>Date</th><th>Reference</th><th>Description</th><th>Debit</th><th>Credit</th><th>Action</th></tr></thead>
+                <tbody>
+                  <tr><td>05-08-2026</td><td>BILL-2026-0082</td><td>Monthly assisted care package</td><td>₹30,000</td><td>—</td><td><button class="table-button">View Bill</button></td></tr>
+                  <tr><td>05-08-2026</td><td>REC-2026-0041</td><td>Advance payment</td><td>—</td><td>₹17,500</td><td><button class="table-button">Receipt</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="view" id="view-documents">
+            <div class="section-heading"><div><span class="eyebrow">Documents</span><h2>Approved resident documents</h2></div><span class="date-chip">3 files</span></div>
+            <div class="document-grid">
+              <article><span>▤</span><div><b>Admission Consent</b><small>PDF · 05-08-2026</small></div><button>View</button></article>
+              <article><span>▤</span><div><b>Discharge Summary</b><small>PDF · 05-08-2026</small></div><button>View</button></article>
+              <article><span>▤</span><div><b>Latest Bill</b><small>PDF · 05-08-2026</small></div><button>View</button></article>
+            </div>
+          </section>
+
+          <section class="view" id="view-visits">
+            <div class="section-heading"><div><span class="eyebrow">Family Visits</span><h2>Request or review visits</h2></div><span class="date-chip">Subject to confirmation</span></div>
+            <div class="dashboard-grid">
+              <form class="panel" id="visit-request-form">
+                <h3>Request a Visit</h3>
+                <div class="form-grid">
+                  <label>Visitor Name<input required name="visitor_name" value="Vimala"></label>
+                  <label>Mobile Number<input required name="visitor_mobile" value="9176735577"></label>
+                  <label>Preferred Date<input required type="date" name="visit_date"></label>
+                  <label>Preferred Time<select name="visit_time"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
+                  <label class="full">Message<textarea name="message" rows="4"></textarea></label>
+                </div>
+                <button class="btn btn-primary" type="submit">Send Visit Request</button>
+                <p class="form-status"></p>
+              </form>
+
+              <section class="panel">
+                <h3>Previous Requests</h3>
+                <div class="request-list">
+                  <div><span class="status done">Approved</span><p><b>08-08-2026 · 4:00 PM</b><small>2 visitors</small></p></div>
+                  <div><span class="status pending">Pending</span><p><b>10-08-2026 · Morning</b><small>Awaiting manager confirmation</small></p></div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="view" id="view-messages">
+            <div class="section-heading"><div><span class="eyebrow">Messages</span><h2>Secure family communication</h2></div><span class="date-chip">Demo mode</span></div>
+            <div class="message-layout">
+              <div class="message-thread">
+                <div class="message received"><b>Samara Nursing Team</b><small>Today, 10:05 AM</small><p>Resident is comfortable and stable. Morning care and medicines were completed.</p></div>
+                <div class="message sent"><b>You</b><small>Today, 10:20 AM</small><p>Thank you. Please inform us after physiotherapy.</p></div>
+              </div>
+              <form class="message-form" id="message-form">
+                <textarea required name="message" rows="3" placeholder="Type a message to the care team"></textarea>
+                <button class="btn btn-primary" type="submit">Send Message</button>
+                <p class="form-status"></p>
+              </form>
+            </div>
+          </section>
+        </main>
+      </div>
+    </section>
+  </div>
+
+  <script src="./js/app.js"></script>
+</body>
+</html>
