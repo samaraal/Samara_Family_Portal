@@ -92,7 +92,7 @@
         <main class="content">
           <section class="view active" id="view-overview">
             <div class="resident-banner">
-              <div class="resident-photo">MM</div>
+              <div class="resident-photo">SC</div>
               <div class="resident-info">
                 <span class="status-pill">Currently at Samara</span>
                 <h2 id="resident-name">Resident</h2>
@@ -101,68 +101,54 @@
               </div>
               <div class="condition-card" id="condition-card">
                 <span>Current Condition</span>
-                <strong>Stable</strong>
-                <small>Last reviewed today at 9:30 AM</small>
+                <strong>Loading…</strong>
+                <small>Reading latest ERP information</small>
               </div>
             </div>
 
             <div class="metric-grid" id="overview-metrics">
-              <article class="metric-card"><span>Medicines Today</span><strong>4 / 6</strong><small>2 scheduled later</small></article>
-              <article class="metric-card"><span>Daily Care</span><strong>6 / 8</strong><small>2 activities pending</small></article>
-              <article class="metric-card"><span>Latest BP</span><strong>128/82</strong><small>Recorded at 9:10 AM</small></article>
-              <article class="metric-card"><span>Outstanding</span><strong>₹12,500</strong><small>Due by 10-08-2026</small></article>
+              <article class="metric-card"><span>Medicines Today</span><strong>—</strong><small>Loading live ERP data</small></article>
+              <article class="metric-card"><span>Daily Care</span><strong>—</strong><small>Loading live ERP data</small></article>
+              <article class="metric-card"><span>Latest Vitals</span><strong>—</strong><small>Loading live ERP data</small></article>
+              <article class="metric-card"><span>Outstanding</span><strong>—</strong><small>Loading live ERP data</small></article>
             </div>
 
             <div class="dashboard-grid">
               <section class="panel">
                 <div class="panel-head"><div><span class="eyebrow">Today</span><h3>Care Timeline</h3></div><button data-open-view="care">View all</button></div>
                 <div class="timeline-list" id="overview-timeline">
-                  <div class="done"><span>07:15 AM</span><p><b>Morning hygiene completed</b><small>Assisted by Caregiver Selvi</small></p></div>
-                  <div class="done"><span>08:00 AM</span><p><b>Breakfast and morning medicines</b><small>Food intake: Good</small></p></div>
-                  <div class="done"><span>09:10 AM</span><p><b>Vitals recorded</b><small>BP 128/82 · Pulse 76 · SpO₂ 98%</small></p></div>
-                  <div class="pending"><span>03:30 PM</span><p><b>Physiotherapy session</b><small>Mobility strengthening</small></p></div>
+                  <div class="pending"><span>—</span><p><b>Loading current care information…</b><small>Reading ERP records</small></p></div>
                 </div>
               </section>
 
               <section class="panel">
                 <div class="panel-head"><div><span class="eyebrow">Communication</span><h3>Latest Update</h3></div><button data-open-view="messages">Messages</button></div>
                 <div class="update-card" id="latest-update">
-                  <span class="avatar small">NS</span>
-                  <div>
-                    <b>Nurse Shift Update</b>
-                    <small>Today, 10:05 AM</small>
-                    <p>Resident is comfortable and stable. Morning medicines were administered as scheduled. Breakfast intake was good. Physiotherapy is planned for the afternoon.</p>
-                  </div>
+                  <div><b>Loading latest update…</b><small>Reading ERP records</small></div>
                 </div>
               </section>
             </div>
           </section>
 
           <section class="view" id="view-care">
-            <div class="section-heading"><div><span class="eyebrow">Daily Care</span><h2>Approved care updates</h2></div><span class="date-chip">06 August 2026</span></div>
+            <div class="section-heading"><div><span class="eyebrow">Daily Care</span><h2>Approved care updates</h2></div><span class="date-chip">Live ERP data</span></div>
             <div class="table-card">
               <table>
                 <thead><tr><th>Care Activity</th><th>Shift</th><th>Status</th><th>Completed At</th><th>Remarks</th></tr></thead>
                 <tbody id="care-body">
-                  <tr><td>Bathing assistance</td><td>Day</td><td><span class="status done">Completed</span></td><td>07:15 AM</td><td>Comfortable</td></tr>
-                  <tr><td>Oral hygiene</td><td>Day</td><td><span class="status done">Completed</span></td><td>07:30 AM</td><td>Completed</td></tr>
-                  <tr><td>Feeding assistance</td><td>Day</td><td><span class="status done">Completed</span></td><td>08:05 AM</td><td>Good intake</td></tr>
-                  <tr><td>Walking / mobility</td><td>Day</td><td><span class="status pending">Pending</span></td><td>—</td><td>Planned after physiotherapy</td></tr>
-                  <tr><td>Fluid intake monitoring</td><td>Both</td><td><span class="status progress">In progress</span></td><td>Ongoing</td><td>650 ml recorded</td></tr>
+                  <tr><td colspan="5">Loading live ERP data…</td></tr>
                 </tbody>
               </table>
             </div>
           </section>
 
           <section class="view" id="view-medicines">
-            <div class="section-heading"><div><span class="eyebrow">Medication</span><h2>Current medicines and administration</h2></div><span class="date-chip">Updated today</span></div>
+            <div class="section-heading"><div><span class="eyebrow">Medication</span><h2>Current medicines and administration</h2></div><span class="date-chip">Live ERP data</span></div>
             <div class="table-card">
               <table>
                 <thead><tr><th>Medicine</th><th>Strength</th><th>Frequency</th><th>Time</th><th>Food</th><th>Status</th></tr></thead>
                 <tbody id="medicines-body">
-                  <tr><td>Tab. Dolo</td><td>650 mg</td><td>BD</td><td>8:00 AM, 8:00 PM</td><td>After food</td><td><span class="status done">Morning given</span></td></tr>
-                  <tr><td>Tab. Pantop</td><td>40 mg</td><td>OD</td><td>7:30 AM</td><td>Before food</td><td><span class="status done">Given</span></td></tr>
-                  <tr><td>Tab. Calcium</td><td>500 mg</td><td>OD</td><td>1:00 PM</td><td>After food</td><td><span class="status pending">Due later</span></td></tr>
+                  <tr><td colspan="6">Loading live ERP data…</td></tr>
                 </tbody>
               </table>
             </div>
@@ -170,65 +156,51 @@
           </section>
 
           <section class="view" id="view-vitals">
-            <div class="section-heading"><div><span class="eyebrow">Vitals</span><h2>Recent recorded observations</h2></div><span class="date-chip">Last 7 days</span></div>
+            <div class="section-heading"><div><span class="eyebrow">Vitals</span><h2>Recent recorded observations</h2></div><span class="date-chip">Live ERP data</span></div>
             <div class="vital-grid" id="vital-grid">
-              <article><span>Blood Pressure</span><strong>128/82</strong><small>Normal range</small></article>
-              <article><span>Pulse</span><strong>76 bpm</strong><small>Regular</small></article>
-              <article><span>SpO₂</span><strong>98%</strong><small>Room air</small></article>
-              <article><span>Temperature</span><strong>98.4°F</strong><small>Afebrile</small></article>
+              <article><span>Latest Vitals</span><strong>—</strong><small>Loading live ERP data</small></article>
             </div>
             <div class="table-card">
               <table>
                 <thead><tr><th>Date & Time</th><th>BP</th><th>Pulse</th><th>SpO₂</th><th>Temperature</th><th>Recorded By</th></tr></thead>
                 <tbody id="vitals-body">
-                  <tr><td>06-08-2026 09:10 AM</td><td>128/82</td><td>76</td><td>98%</td><td>98.4°F</td><td>Nurse Nandhini</td></tr>
-                  <tr><td>05-08-2026 07:45 PM</td><td>132/84</td><td>80</td><td>97%</td><td>98.6°F</td><td>Nurse Raji</td></tr>
+                  <tr><td colspan="6">Loading live ERP data…</td></tr>
                 </tbody>
               </table>
             </div>
           </section>
 
           <section class="view" id="view-physio">
-            <div class="section-heading"><div><span class="eyebrow">Physiotherapy</span><h2>Mobility and rehabilitation updates</h2></div><span class="date-chip">3 sessions this week</span></div>
+            <div class="section-heading"><div><span class="eyebrow">Physiotherapy</span><h2>Mobility and rehabilitation updates</h2></div><span class="date-chip">Live ERP data</span></div>
             <div class="panel" id="physio-plan">
-              <h3>Current Plan</h3>
-              <div class="detail-grid">
-                <div><span>Therapy Type</span><b>Lower-limb strengthening</b></div>
-                <div><span>Frequency</span><b>5 days per week</b></div>
-                <div><span>Next Session</span><b>Today, 3:30 PM</b></div>
-                <div><span>Therapist</span><b>Ms. Priya</b></div>
-              </div>
+              <h3>Current Plan</h3><p>Loading live ERP data…</p>
             </div>
             <div class="panel" id="physio-progress">
-              <h3>Latest Progress Note</h3>
-              <p>Resident completed supported standing and assisted walking exercises. Tolerance was satisfactory. Continue strengthening and balance training.</p>
+              <h3>Latest Progress Note</h3><p>Loading live ERP data…</p>
             </div>
           </section>
 
           <section class="view" id="view-billing">
             <div class="section-heading"><div><span class="eyebrow">Billing</span><h2>Bills, payments and outstanding amount</h2></div><button class="primary-small">Pay Online – Coming Soon</button></div>
             <div class="metric-grid billing-metrics" id="billing-metrics">
-              <article class="metric-card"><span>Total Charges</span><strong>₹30,000</strong><small>Current billing period</small></article>
-              <article class="metric-card"><span>Payments</span><strong>₹17,500</strong><small>Received</small></article>
-              <article class="metric-card"><span>Outstanding</span><strong>₹12,500</strong><small>Due by 10-08-2026</small></article>
+              <article class="metric-card"><span>Total Charges</span><strong>—</strong><small>Loading ERP ledger</small></article>
+              <article class="metric-card"><span>Payments</span><strong>—</strong><small>Loading ERP ledger</small></article>
+              <article class="metric-card"><span>Outstanding</span><strong>—</strong><small>Loading ERP ledger</small></article>
             </div>
             <div class="table-card">
               <table>
                 <thead><tr><th>Date</th><th>Reference</th><th>Description</th><th>Debit</th><th>Credit</th><th>Action</th></tr></thead>
                 <tbody id="billing-body">
-                  <tr><td>05-08-2026</td><td>BILL-2026-0082</td><td>Monthly assisted care package</td><td>₹30,000</td><td>—</td><td><button class="table-button">View Bill</button></td></tr>
-                  <tr><td>05-08-2026</td><td>REC-2026-0041</td><td>Advance payment</td><td>—</td><td>₹17,500</td><td><button class="table-button">Receipt</button></td></tr>
+                  <tr><td colspan="6">Loading live ERP data…</td></tr>
                 </tbody>
               </table>
             </div>
           </section>
 
           <section class="view" id="view-documents">
-            <div class="section-heading"><div><span class="eyebrow">Documents</span><h2>Approved resident documents</h2></div><span class="date-chip">3 files</span></div>
+            <div class="section-heading"><div><span class="eyebrow">Documents</span><h2>Approved resident documents</h2></div><span class="date-chip">Live ERP data</span></div>
             <div class="document-grid" id="documents-grid">
-              <article><span>▤</span><div><b>Admission Consent</b><small>PDF · 05-08-2026</small></div><button>View</button></article>
-              <article><span>▤</span><div><b>Discharge Summary</b><small>PDF · 05-08-2026</small></div><button>View</button></article>
-              <article><span>▤</span><div><b>Latest Bill</b><small>PDF · 05-08-2026</small></div><button>View</button></article>
+              <article><span>▤</span><div><b>Loading documents…</b><small>Reading ERP records</small></div></article>
             </div>
           </section>
 
@@ -259,7 +231,7 @@
           </section>
 
           <section class="view" id="view-messages">
-            <div class="section-heading"><div><span class="eyebrow">Messages</span><h2>Secure family communication</h2></div><span class="date-chip">Demo mode</span></div>
+            <div class="section-heading"><div><span class="eyebrow">Messages</span><h2>Secure family communication</h2></div><span class="date-chip">Not yet connected to ERP</span></div>
             <div class="message-layout">
               <div class="message-thread">
                 <div class="message received"><b>Samara Nursing Team</b><small>Today, 10:05 AM</small><p>Resident is comfortable and stable. Morning care and medicines were completed.</p></div>
