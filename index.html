@@ -29,14 +29,11 @@
         <div class="login-card">
           <span class="eyebrow">Family Login</span>
           <h2>Welcome back</h2>
-          <p>Use the Patient ID and registered family mobile number.</p>
+          <p>Use the resident Patient ID and your secure 6-digit Access PIN.</p>
 
           <form id="login-form">
             <label>Patient ID
               <input name="patient_id" required placeholder="Example: PAT-2026-08-0002">
-            </label>
-            <label>Registered Mobile Number
-              <input name="mobile" required inputmode="numeric" maxlength="10" placeholder="10-digit mobile number">
             </label>
             <label>Access PIN
               <input name="pin" required inputmode="numeric" maxlength="6" placeholder="6-digit PIN">
@@ -45,13 +42,6 @@
             <button class="btn btn-primary" type="submit">Sign in securely</button>
             <p class="form-status" id="login-status"></p>
           </form>
-
-          <div class="demo-box">
-            <b>Demo access</b>
-            <span>Patient ID: PAT-2026-08-0002</span>
-            <span>Mobile: 9841235577</span>
-            <span>PIN: 123456</span>
-          </div>
 
           <a class="back-link" href="https://samaraassistedliving.com">← Return to Samara website</a>
         </div>
@@ -62,7 +52,7 @@
       <aside class="sidebar">
         <div class="sidebar-brand">
           <img src="./assets/samara-logo.png" alt="Samara Assisted Living">
-          <small>Family Portal v1.0.0</small>
+          <small>Family Portal v1.0.1</small>
         </div>
 
         <nav class="side-nav">
@@ -79,8 +69,8 @@
 
         <div class="sidebar-footer">
           <div class="family-user">
-            <span class="avatar">VM</span>
-            <p><b>Vimala</b><small>Authorised Relative</small></p>
+            <span class="avatar" id="family-avatar">FM</span>
+            <p><b id="family-name">Family Member</b><small id="family-relationship">Authorised Relative</small></p>
           </div>
           <button class="signout" id="signout-button">Sign out</button>
         </div>
@@ -105,9 +95,9 @@
               <div class="resident-photo">MM</div>
               <div class="resident-info">
                 <span class="status-pill">Currently at Samara</span>
-                <h2>Mr. Murugan</h2>
-                <p>PAT-2026-08-0002 · Room 102-B · Twin Sharing</p>
-                <small>Admitted on 05-08-2026 · Primary contact: Vimala</small>
+                <h2 id="resident-name">Resident</h2>
+                <p id="resident-summary">Patient information will load after secure sign-in.</p>
+                <small id="resident-contact">Authorised family access</small>
               </div>
               <div class="condition-card">
                 <span>Current Condition</span>
@@ -287,6 +277,8 @@
     </section>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="./config.js"></script>
   <script src="./js/app.js"></script>
 </body>
 </html>
