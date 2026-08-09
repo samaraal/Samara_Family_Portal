@@ -224,11 +224,35 @@
 </div>
 </section>
 </main>
-<section class="view" id="view-feedback"><div class="section-heading"><div><span class="eyebrow">Your Voice Matters</span><h2>Feedback to Samara</h2></div><span class="date-chip">Secure</span></div><div class="panel family-feedback-panel"><h3>Share Your Experience</h3><p>You may submit feedback as an authorised family member or on behalf of the resident.</p><form id="family-feedback-form"><div class="family-feedback-grid"><label>You Are<select name="respondent_type"><option>Family Member</option><option>Resident / Patient</option></select></label><label>Category<select name="category"><option>Overall Experience</option><option>Nursing Care</option><option>Caregiver Support</option><option>Food &amp; Diet</option><option>Physiotherapy</option><option>Rooms &amp; Facilities</option><option>Billing</option><option>Administration</option><option>Family Communication</option><option>Compliment</option><option>Suggestion</option><option>Complaint / Concern</option><option>Other</option></select></label><label class="span-2">Rating<div class="family-stars"><input id="f5" name="rating" type="radio" value="5"/><label for="f5">★</label><input id="f4" name="rating" type="radio" value="4"/><label for="f4">★</label><input id="f3" name="rating" type="radio" value="3"/><label for="f3">★</label><input id="f2" name="rating" type="radio" value="2"/><label for="f2">★</label><input id="f1" name="rating" type="radio" value="1"/><label for="f1">★</label></div></label><label class="span-2">Subject<input maxlength="180" name="subject"/></label><label class="span-2">Feedback<textarea maxlength="4000" name="message" required="" rows="7"></textarea></label><label class="span-2 feedback-check"><input checked="" name="consent" type="checkbox"/> Samara may contact me regarding this feedback.</label></div><div class="form-status"></div><button class="primary" type="submit">Submit Feedback</button></form></div></section></div>
+<section class="view" id="view-feedback">
+<div class="section-heading"><div><span class="eyebrow">Your Voice Matters</span><h2>Feedback to Samara</h2></div><span class="date-chip">Secure</span></div>
+<div class="family-feedback-layout">
+  <div class="panel family-feedback-panel">
+    <h3>Share Your Experience</h3>
+    <p>You may submit feedback as an authorised family member or on behalf of the resident.</p>
+    <form id="family-feedback-form">
+      <div class="family-feedback-grid">
+        <label>You Are<select name="respondent_type"><option>Family Member</option><option>Resident / Patient</option></select></label>
+        <label>Category<select name="category"><option>Overall Experience</option><option>Nursing Care</option><option>Caregiver Support</option><option>Food &amp; Diet</option><option>Physiotherapy</option><option>Rooms &amp; Facilities</option><option>Billing</option><option>Administration</option><option>Family Communication</option><option>Compliment</option><option>Suggestion</option><option>Complaint / Concern</option><option>Other</option></select></label>
+        <label class="span-2">Rating<div class="family-stars"><input id="f5" name="rating" type="radio" value="5"/><label for="f5">★</label><input id="f4" name="rating" type="radio" value="4"/><label for="f4">★</label><input id="f3" name="rating" type="radio" value="3"/><label for="f3">★</label><input id="f2" name="rating" type="radio" value="2"/><label for="f2">★</label><input id="f1" name="rating" type="radio" value="1"/><label for="f1">★</label></div></label>
+        <label class="span-2">Subject<input maxlength="180" name="subject"/></label>
+        <label class="span-2">Feedback<textarea maxlength="4000" name="message" required rows="6"></textarea></label>
+        <label class="span-2 feedback-check"><input checked name="consent" type="checkbox"/> I would like Samara to respond to this feedback in the Family Portal.</label>
+      </div>
+      <div class="form-status"></div>
+      <button class="primary" type="submit">Submit Feedback</button>
+    </form>
+  </div>
+  <div class="panel family-feedback-history-panel">
+    <div class="family-feedback-history-head"><div><small>Previous Feedback</small><h3>Management Responses</h3></div><button type="button" id="family-feedback-refresh">↻ Refresh</button></div>
+    <div id="family-feedback-history"><p class="family-feedback-empty">Loading feedback history…</p></div>
+  </div>
+</div>
+</section></div>
 </section>
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./js/family-app-v1.0.4.js?v=1.0.4"></script>
+<script src="./js/family-app-v1.0.5.js?v=1.0.5"></script>
 </body>
 </html>
