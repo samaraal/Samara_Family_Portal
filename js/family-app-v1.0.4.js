@@ -251,3 +251,14 @@ document.querySelector('#message-form')?.addEventListener('submit',event=>{event
 try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;openPortal(saved);loadDashboard(false).then(ok=>{if(!ok)closePortal();});}}catch(_){sessionStorage.removeItem('samara_family_session');}
 initSamaraInaugurationInvitation();
 console.info(`Samara Family Portal ${FAMILY_PORTAL_VERSION}`);
+
+
+// v1.1.0 — Secure Family / Resident Feedback.
+document.querySelector('#family-feedback-form')?.addEventListener('submit',async event=>{
+  event.preventDefault(); const form=event.currentTarget,status=form.querySelector('.form-status'),button=form.querySelector('button[type="submit"]'); const fd=new FormData(form);
+  if(!familySession?.session_token||!supabaseClient){status.textContent='Your secure Family Portal session is unavailable. Please sign in again.';return;}
+  try{button.disabled=true;button.textContent='Submitting…';status.textContent='Saving your feedback securely…';const rating=fd.get('rating');
+    const {data,error}=await supabaseClient.rpc('family_submit_feedback',{p_session_token:familySession.session_token,p_respondent_type:String(fd.get('respondent_type')||'Family Member'),p_category:String(fd.get('category')||'General'),p_rating:rating?Number(rating):null,p_subject:String(fd.get('subject')||''),p_message:String(fd.get('message')||''),p_consent_to_contact:!!fd.get('consent')});
+    if(error)throw error;form.reset();status.textContent='✓ Thank you. Your feedback has been sent securely to Samara management.';
+  }catch(err){console.error(err);status.textContent=err.message||'Unable to submit feedback.';}finally{button.disabled=false;button.textContent='Submit Feedback';}
+});

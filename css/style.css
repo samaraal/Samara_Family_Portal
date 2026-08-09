@@ -216,3 +216,7 @@ td{color:#4d3b46}
   .message-form{grid-template-columns:1fr}
   .message{max-width:92%}
 }
+
+
+/* v1.1.0 — Feedback */
+.family-feedback-panel{max-width:900px}.family-feedback-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:22px 0}.family-feedback-grid>label{display:flex;flex-direction:column;gap:8px;font-weight:700;color:#4e3040}.family-feedback-grid .span-2{grid-column:1/-1}.family-feedback-grid input,.family-feedback-grid select,.family-feedback-grid textarea{width:100%;box-sizing:border-box}.family-feedback-grid .feedback-check{flex-direction:row;align-items:center;font-weight:600}.family-feedback-grid .feedback-check input{width:auto}.family-stars{display:flex;flex-direction:row-reverse;justify-content:flex-end;gap:5px}.family-stars input{position:absolute;opacity:0}.family-stars label{font-size:2rem;color:#d6c8cf;cursor:pointer}.family-stars input:checked~label,.family-stars label:hover,.family-stars label:hover~label{color:#b01264}@media(max-width:650px){.family-feedback-grid{grid-template-columns:1fr}.family-feedback-grid .span-2{grid-column:auto}}
