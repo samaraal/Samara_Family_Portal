@@ -47,11 +47,12 @@
 <aside class="sidebar">
 <div class="sidebar-brand">
 <img alt="Samara Assisted Living" src="./assets/samara-logo.png"/>
-<small>Family Portal v1.0.4</small>
+<small>Family Portal v1.0.6</small>
 </div>
 <nav class="side-nav">
 <button class="active" data-view="overview"><span>⌂</span> Overview</button>
 <button data-view="care"><span>♥</span> Daily Care</button>
+<button data-view="moments"><span>▶</span> Daily Moments</button>
 <button data-view="medicines"><span>◐</span> Medicines</button>
 <button data-view="vitals"><span>⌁</span> Vitals</button>
 <button data-view="physio"><span>⚘</span> Physiotherapy</button>
@@ -127,6 +128,12 @@
 </tbody>
 </table>
 </div>
+</section>
+<section class="view" id="view-moments">
+<div class="section-heading"><div><span class="eyebrow">Daily Moments</span><h2>A little glimpse of your loved one</h2></div><span class="date-chip">Available for 7 days</span></div>
+<div class="moments-intro"><div class="moments-heart">♥</div><div><b>Stay close, even from a distance.</b><p>Short moments shared by the Samara care team are available here for seven days. These private clips are visible only through authorised Family Portal access.</p></div></div>
+<div class="moments-grid" id="daily-moments-grid"><article class="moment-empty"><b>Loading Daily Moments…</b><small>Please wait while we securely check for recent clips.</small></article></div>
+<p class="moments-status" id="daily-moments-status"></p>
 </section>
 <section class="view" id="view-medicines">
 <div class="section-heading"><div><span class="eyebrow">Medication</span><h2>Current medicines and administration</h2></div><span class="date-chip">Live ERP data</span></div>
@@ -253,6 +260,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./js/family-app-v1.0.5.js?v=1.0.5"></script>
+<script src="./js/family-app-v1.0.6.js?v=1.0.6"></script>
 </body>
 </html>
