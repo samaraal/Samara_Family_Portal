@@ -270,7 +270,7 @@ async function loadFamilyFeedbackHistory(){
           <div><b>${esc(row.feedback_reference||'Feedback')}</b><small>${esc(dateTimeIN(row.created_at))}</small></div>
           <span class="family-feedback-status">${esc(row.status||'New')}</span>
         </div>
-        <div class="family-feedback-meta">${esc(row.category||'General')}${row.rating?` · ${esc(row.rating)} ★`:''}</div>
+        <div class="family-feedback-meta">${esc(row.feedback_nature||'—')} · ${esc(row.category||'General')}${row.rating?` · ${esc(row.rating)} ★`:''}</div>
         <h4>${esc(row.subject||'Feedback')}</h4>
         <p>${esc(row.message||'—')}</p>
         ${row.admin_reply?`<div class="family-management-reply"><small>Samara Management Response${row.replied_at?` · ${esc(dateTimeIN(row.replied_at))}`:''}</small><p>${esc(row.admin_reply)}</p></div>`:'<div class="family-awaiting-reply">Awaiting management response</div>'}
@@ -290,7 +290,8 @@ document.querySelector('#family-feedback-form')?.addEventListener('submit',async
     const rating=fd.get('rating');
     const {data,error}=await supabaseClient.rpc('family_submit_feedback',{
       p_session_token:familySession.session_token,
-      p_respondent_type:String(fd.get('respondent_type')||'Family Member'),
+      p_respondent_type:String(fd.get('respondent_type')||'Relative'),
+      p_feedback_nature:String(fd.get('feedback_nature')||''),
       p_category:String(fd.get('category')||'General'),
       p_rating:rating?Number(rating):null,
       p_subject:String(fd.get('subject')||''),
