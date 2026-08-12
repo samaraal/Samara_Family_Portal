@@ -332,7 +332,7 @@ async function loadDailyMoments(){
     const response=await fetch(`${cfg.supabaseUrl}/functions/v1/family-daily-moments`,{
       method:'POST',
       headers:{'Content-Type':'application/json','apikey':cfg.supabasePublishableKey,'Authorization':`Bearer ${cfg.supabasePublishableKey}`},
-      body:JSON.stringify({session_token:familySession.session_token})
+      body:JSON.stringify({session_token:familySession.session_token,access_id:familySession.access_id,patient_uuid:familySession.patient_uuid})
     });
     const payload=await response.json().catch(()=>({}));
     if(!response.ok||payload.success===false)throw new Error(payload.error||'Unable to load Daily Moments.');

@@ -1,0 +1,9 @@
+Samara Family Portal - Daily Moments resident-link fix
+
+Replace:
+1. js/family-app-v1.0.6.js in the Family Portal GitHub repository.
+2. Supabase Edge Function family-daily-moments/index.ts, then deploy a new version of the function.
+
+No SQL change is required.
+
+Fix: Daily Moments now uses the Family Portal login's existing patient_uuid and verifies it against the active family_portal_access record before returning signed video URLs.
