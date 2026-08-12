@@ -254,6 +254,22 @@ console.info(`Samara Family Portal ${FAMILY_PORTAL_VERSION}`);
 
 
 
+
+// Automatic feedback classification — the family member does not choose Positive/Negative.
+function samaraFamilyClassifyFeedbackNature({rating,category,subject,message}){
+  const r=Number(rating||0);
+  const text=`${category||''} ${subject||''} ${message||''}`.toLowerCase();
+  let score=0;
+  if(r>=5)score+=4; else if(r===4)score+=3; else if(r===2)score-=3; else if(r===1)score-=4;
+  const positive=['excellent','very good','great','wonderful','fantastic','superb','happy','satisfied','thank','appreciate','caring','kind','compassion','comfortable','helpful','supportive','professional','clean','compliment','well cared','reassured'];
+  const negative=['bad','poor','terrible','worst','unhappy','dissatisfied','complaint','concern','problem','delay','rude','unclean','dirty','missed','not given','not done','no response','unresponsive','overcharge','wrong','disappointed','unsafe'];
+  positive.forEach(term=>{if(text.includes(term))score+= term==='excellent'||term==='wonderful'||term==='fantastic'||term==='superb'?3:1});
+  negative.forEach(term=>{if(text.includes(term))score-= term==='terrible'||term==='worst'||term==='unsafe'?4:2});
+  if(String(category||'').toLowerCase().includes('compliment'))score+=3;
+  if(String(category||'').toLowerCase().includes('complaint'))score-=3;
+  return score>=0?'Positive':'Negative';
+}
+
 // v1.2.0 — Secure Family / Resident Feedback with Management Replies.
 async function loadFamilyFeedbackHistory(){
   const host=document.querySelector('#family-feedback-history');
@@ -291,7 +307,7 @@ document.querySelector('#family-feedback-form')?.addEventListener('submit',async
     const {data,error}=await supabaseClient.rpc('family_submit_feedback',{
       p_session_token:familySession.session_token,
       p_respondent_type:String(fd.get('respondent_type')||'Relative'),
-      p_feedback_nature:String(fd.get('feedback_nature')||''),
+      p_feedback_nature:samaraFamilyClassifyFeedbackNature({rating:rating?Number(rating):null,category:String(fd.get('category')||'General'),subject:String(fd.get('subject')||''),message:String(fd.get('message')||'')}),
       p_category:String(fd.get('category')||'General'),
       p_rating:rating?Number(rating):null,
       p_subject:String(fd.get('subject')||''),
