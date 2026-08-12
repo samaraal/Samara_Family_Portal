@@ -36,7 +36,7 @@ button{cursor:pointer}
   padding:64px;display:flex;flex-direction:column;justify-content:center;color:#fff;
   background:linear-gradient(145deg,var(--plum),var(--wine) 48%,var(--magenta))
 }
-.login-brand img{width:240px;filter:brightness(0) invert(1);margin-bottom:38px}
+.login-brand img{width:240px;filter:none;margin-bottom:38px}
 .login-brand .eyebrow{color:#ffd6e8}
 .login-brand h1{font-size:clamp(2.5rem,5vw,4.7rem);line-height:1.02;letter-spacing:-.05em;margin:15px 0 20px}
 .login-brand>p{color:#f5dce8;font-size:1.08rem}
