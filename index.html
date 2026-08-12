@@ -7,15 +7,15 @@
 <meta content="#b01264" name="theme-color"/>
 <meta content="Secure family portal for authorised relatives of Samara Assisted Living residents." name="description"/>
 <title>Samara Family Portal</title>
-<link href="./assets/samara-logo.png" rel="icon"/>
-<link href="./css/style.css" rel="stylesheet"/>
+<link href="./assets/samara-logo.png?v=20260812-global1" rel="icon"/>
+<link href="./css/style.css?v=20260812-global1" rel="stylesheet"/>
 </head>
 <body>
 <div id="app">
 <section class="login-screen" id="login-screen">
 <div class="login-shell">
 <div class="login-brand">
-<img alt="Samara Assisted Living" src="./assets/samara-logo.png"/>
+<img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
 <span class="eyebrow">Secure Family Access</span>
 <h1>Stay connected with your loved one.</h1>
 <p>Authorised family members can view approved care updates, medicines, vitals, bills, documents and visit information.</p>
@@ -46,7 +46,7 @@
 <section class="portal-screen hidden" id="portal-screen">
 <aside class="sidebar">
 <div class="sidebar-brand">
-<img alt="Samara Assisted Living" src="./assets/samara-logo.png"/>
+<img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
 <small>Family Portal v1.0.6</small>
 </div>
 <nav class="side-nav">
@@ -239,8 +239,8 @@
     <p>You may submit feedback as an authorised family member or on behalf of the resident.</p>
     <form id="family-feedback-form">
       <div class="family-feedback-grid">
-        <label>You Are<select name="respondent_type"><option value="Relative">Relative / Family Member</option><option value="Patient">Patient / Resident</option></select></label>
-        <label>Category<select name="category"><option>Overall Experience</option><option>Nursing Care</option><option>Caregiver Support</option><option>Food &amp; Diet</option><option>Physiotherapy</option><option>Rooms &amp; Facilities</option><option>Billing</option><option>Administration</option><option>Family Communication</option><option>Compliment</option><option>Suggestion</option><option>Complaint / Concern</option><option>Other</option></select></label><div class="family-auto-classify-note"><b>Automatic classification</b><small>Samara will classify your feedback from your rating and comments. You do not need to label it Positive or Negative.</small></div>
+        <label>You Are<select name="respondent_type"><option>Family Member</option><option>Resident / Patient</option></select></label>
+        <label>Category<select name="category"><option>Overall Experience</option><option>Nursing Care</option><option>Caregiver Support</option><option>Food &amp; Diet</option><option>Physiotherapy</option><option>Rooms &amp; Facilities</option><option>Billing</option><option>Administration</option><option>Family Communication</option><option>Compliment</option><option>Suggestion</option><option>Complaint / Concern</option><option>Other</option></select></label>
         <label class="span-2">Rating<div class="family-stars"><input id="f5" name="rating" type="radio" value="5"/><label for="f5">★</label><input id="f4" name="rating" type="radio" value="4"/><label for="f4">★</label><input id="f3" name="rating" type="radio" value="3"/><label for="f3">★</label><input id="f2" name="rating" type="radio" value="2"/><label for="f2">★</label><input id="f1" name="rating" type="radio" value="1"/><label for="f1">★</label></div></label>
         <label class="span-2">Subject<input maxlength="180" name="subject"/></label>
         <label class="span-2">Feedback<textarea maxlength="4000" name="message" required rows="6"></textarea></label>
@@ -260,6 +260,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./js/family-app-v1.0.6.js?v=1.0.8"></script>
+<script src="./js/family-app-v1.0.6.js?v=1.0.7"></script>
 </body>
 </html>
