@@ -245,6 +245,31 @@ function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name
 document.querySelectorAll('.side-nav button[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.openView)));
 document.querySelector('#refresh-button')?.addEventListener('click',()=>loadDashboard(true));
+
+// Admission enquiries are created only from the public Website or secure Family Portal.
+document.querySelector('#family-enquiry-form')?.addEventListener('submit',async event=>{
+  event.preventDefault();
+  const form=event.currentTarget,status=form.querySelector('.form-status'),button=form.querySelector('button[type="submit"]'),fd=new FormData(form);
+  if(!familySession?.session_token||!supabaseClient){status.textContent='Your secure Family Portal session is unavailable. Please sign in again.';return;}
+  const ageRaw=String(fd.get('age')||'').trim();
+  try{
+    button.disabled=true;button.textContent='Sending…';status.textContent='Sending your admission enquiry securely to Samara…';
+    const {data,error}=await supabaseClient.rpc('family_submit_admission_enquiry',{
+      p_session_token:familySession.session_token,
+      p_resident_name:String(fd.get('resident_name')||'').trim(),
+      p_age:ageRaw?Number(ageRaw):null,
+      p_contact_person:String(fd.get('contact_person')||'').trim(),
+      p_mobile:String(fd.get('mobile')||'').trim(),
+      p_care_type:String(fd.get('care_type')||'').trim(),
+      p_preferred_room:String(fd.get('preferred_room')||'').trim(),
+      p_condition:String(fd.get('condition')||'').trim()
+    });
+    if(error)throw error;
+    form.reset();
+    status.textContent='✓ Admission enquiry sent successfully. Samara Admin / Manager can now see it in ERP Overview and Enquiries.';
+  }catch(err){console.error(err);status.textContent=err.message||'Unable to send admission enquiry.';}
+  finally{button.disabled=false;button.textContent='Send Admission Enquiry';}
+});
 async function loadFamilyVisitHistory(){
  const host=document.querySelector('#family-visit-history');if(!host||!familySession?.session_token)return;
  host.innerHTML='<p>Loading visit requests…</p>';try{const {data,error}=await supabaseClient.rpc('family_list_visit_requests',{p_session_token:familySession.session_token});if(error)throw error;const rows=Array.isArray(data)?data:[];host.innerHTML=rows.length?rows.map(r=>`<div><span class="status ${String(r.status||'Pending').toLowerCase()==='approved'?'done':'pending'}">${esc(r.status||'Pending')}</span><p><b>${esc(formatDateIN(r.visit_date))} · ${esc(r.visit_time||'—')}</b><small>${esc(r.management_remarks||(r.status==='Pending'?'Awaiting manager confirmation':''))}</small></p></div>`).join(''):'<p>No visit requests submitted yet.</p>';}catch(e){host.innerHTML=`<p>${esc(e.message||'Unable to load visit requests.')}</p>`;}
