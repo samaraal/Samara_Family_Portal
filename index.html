@@ -209,20 +209,14 @@
 </form>
 <section class="panel">
 <h3>Previous Requests</h3>
-<div class="request-list">
-<div><span class="status done">Approved</span><p><b>08-08-2026 · 4:00 PM</b><small>2 visitors</small></p></div>
-<div><span class="status pending">Pending</span><p><b>10-08-2026 · Morning</b><small>Awaiting manager confirmation</small></p></div>
-</div>
+<div class="request-list" id="family-visit-history"><p>Loading visit requests…</p></div>
 </section>
 </div>
 </section>
 <section class="view" id="view-messages">
-<div class="section-heading"><div><span class="eyebrow">Messages</span><h2>Secure family communication</h2></div><span class="date-chip">Not yet connected to ERP</span></div>
+<div class="section-heading"><div><span class="eyebrow">Messages</span><h2>Secure family communication</h2></div><span class="date-chip">Secure ERP connection</span></div>
 <div class="message-layout">
-<div class="message-thread">
-<div class="message received"><b>Samara Nursing Team</b><small>Today, 10:05 AM</small><p>Resident is comfortable and stable. Morning care and medicines were completed.</p></div>
-<div class="message sent"><b>You</b><small>Today, 10:20 AM</small><p>Thank you. Please inform us after physiotherapy.</p></div>
-</div>
+<div class="message-thread" id="family-message-thread"><p>Loading secure messages…</p></div>
 <form class="message-form" id="message-form">
 <textarea name="message" placeholder="Type a message to the care team" required="" rows="3"></textarea>
 <button class="btn btn-primary" type="submit">Send Message</button>
@@ -260,6 +254,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./js/family-app-v1.0.6.js?v=1.0.7"></script>
+<script src="./js/family-app-v1.0.6.js?v=1.0.8"></script>
 </body>
 </html>
