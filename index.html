@@ -58,6 +58,7 @@
 <button data-view="physio"><span>⚘</span> Physiotherapy</button>
 <button data-view="billing"><span>₹</span> Billing</button>
 <button data-view="documents"><span>▤</span> Documents</button>
+<button data-view="enquiry"><span>☎</span> Admission Enquiry</button>
 <button data-view="visits"><span>◷</span> Visit Requests</button>
 <button data-view="messages"><span>✉</span> Messages</button>
 <button data-view="feedback"><span>★</span> Feedback</button></nav>
@@ -192,6 +193,34 @@
 <article><span>▤</span><div><b>Loading documents…</b><small>Reading ERP records</small></div></article>
 </div>
 </section>
+<section class="view" id="view-enquiry">
+<div class="section-heading"><div><span class="eyebrow">Admission Enquiry</span><h2>Send an admission enquiry to Samara</h2></div><span class="date-chip">Admin / Manager review</span></div>
+<div class="dashboard-grid">
+<form class="panel" id="family-enquiry-form">
+<h3>Admission Enquiry</h3>
+<p>You may enquire for a family member or another person requiring assisted-living care. The request will be sent securely to Samara Admin / Manager.</p>
+<div class="form-grid">
+<label>Resident Name<input name="resident_name" required=""/></label>
+<label>Age<input name="age" min="0" max="120" type="number"/></label>
+<label>Contact Person<input name="contact_person" required=""/></label>
+<label>Mobile Number<input inputmode="tel" name="mobile" required=""/></label>
+<label>Care Type<select name="care_type"><option>Direct Elderly Care</option><option>Hospital Discharge Recovery</option><option>Short Stay / Respite</option><option>Long-Term Assisted Living</option><option>Physiotherapy Support</option><option>Special / Dedicated Nurse</option></select></label>
+<label>Preferred Room<select name="preferred_room"><option>Private</option><option>Twin Sharing</option><option>General</option><option>Need Guidance</option></select></label>
+<label class="full">Current Condition / Requirements<textarea name="condition" rows="5"></textarea></label>
+</div>
+<button class="btn btn-primary" type="submit">Send Admission Enquiry</button>
+<p class="form-status"></p>
+</form>
+<section class="panel">
+<h3>How it works</h3>
+<div class="request-list">
+<article><span class="status approved">1</span><div><b>Submit securely</b><small>The enquiry is recorded directly in Samara Care ERP.</small></div></article>
+<article><span class="status pending">2</span><div><b>Management review</b><small>Admin / Manager will see it immediately in Overview and Admission → Enquiries.</small></div></article>
+<article><span class="status pending">3</span><div><b>Follow-up</b><small>Samara will contact the mobile number entered in the enquiry.</small></div></article>
+</div>
+</section>
+</div>
+</section>
 <section class="view" id="view-visits">
 <div class="section-heading"><div><span class="eyebrow">Family Visits</span><h2>Request or review visits</h2></div><span class="date-chip">Subject to confirmation</span></div>
 <div class="dashboard-grid">
@@ -254,6 +283,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./js/family-app-v1.0.6.js?v=1.0.8"></script>
+<script src="./js/family-app-v1.0.6.js?v=1.0.9"></script>
 </body>
 </html>
