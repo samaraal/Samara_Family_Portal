@@ -1,288 +1,40 @@
-<!DOCTYPE html>
-
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8"/>
-<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<meta content="#b01264" name="theme-color"/>
-<meta content="Secure family portal for authorised relatives of Samara Assisted Living residents." name="description"/>
-<title>Samara Family Portal</title>
-<link href="./assets/samara-logo.png?v=20260812-global1" rel="icon"/>
-<link href="./css/style.css?v=20260813-family-gradient1" rel="stylesheet"/>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#b01264" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Samara Care" />
+  <title>Samara Care ERP 2.8.76</title>
+  <link rel="manifest" href="./manifest.webmanifest?v=2.8.39" />
+  <link rel="apple-touch-icon" sizes="180x180" href="./icons/apple-touch-icon.png?v=2.8.39" />
+  <link rel="icon" type="image/png" href="./icons/favicon.png?v=2.8.39" />
+  <link rel="stylesheet" href="./styles.css?v=2.8.76" />
 </head>
 <body>
-<div id="app">
-<section class="login-screen" id="login-screen">
-<div class="login-shell">
-<div class="login-brand">
-<img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
-<span class="eyebrow">Secure Family Access</span>
-<h1>Stay connected with your loved one.</h1>
-<p>Authorised family members can view approved care updates, medicines, vitals, bills, documents and visit information.</p>
-<div class="login-benefits">
-<div><span>♥</span><p><b>Daily Care Updates</b><small>Approved care and wellbeing information</small></p></div>
-<div><span>⚕</span><p><b>Clinical Summary</b><small>Medicines, vitals and doctor coordination</small></p></div>
-<div><span>₹</span><p><b>Billing Access</b><small>Bills, receipts and outstanding information</small></p></div>
-</div>
-</div>
-<div class="login-card">
-<span class="eyebrow">Family Login</span>
-<h2>Welcome back</h2>
-<p>Use the resident Patient ID and your secure 6-digit Access PIN.</p>
-<form id="login-form">
-<label>Patient ID
-              <input name="patient_id" placeholder="Example: PAT-2026-08-0002" required=""/>
-</label>
-<label>Access PIN
-              <input inputmode="numeric" maxlength="6" name="pin" placeholder="6-digit PIN" required=""/>
-</label>
-<button class="btn btn-primary" type="submit">Sign in securely</button>
-<p class="form-status" id="login-status"></p>
-</form>
-<a class="back-link" href="https://samaraassistedliving.com">← Return to Samara website</a>
-</div>
-</div>
-</section>
-<section class="portal-screen hidden" id="portal-screen">
-<aside class="sidebar">
-<div class="sidebar-brand">
-<img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
-<small>Family Portal v1.0.6</small>
-</div>
-<nav class="side-nav">
-<button class="active" data-view="overview"><span>⌂</span> Overview</button>
-<button data-view="care"><span>♥</span> Daily Care</button>
-<button data-view="moments"><span>▶</span> Daily Moments</button>
-<button data-view="medicines"><span>◐</span> Medicines</button>
-<button data-view="vitals"><span>⌁</span> Vitals</button>
-<button data-view="physio"><span>⚘</span> Physiotherapy</button>
-<button data-view="billing"><span>₹</span> Billing</button>
-<button data-view="documents"><span>▤</span> Documents</button>
-<button data-view="enquiry"><span>☎</span> Admission Enquiry</button>
-<button data-view="visits"><span>◷</span> Visit Requests</button>
-<button data-view="messages"><span>✉</span> Messages</button>
-<button data-view="feedback"><span>★</span> Feedback</button></nav>
-<div class="sidebar-footer">
-<div class="family-user">
-<span class="avatar" id="family-avatar">FM</span>
-<p><b id="family-name">Family Member</b><small id="family-relationship">Authorised Relative</small></p>
-</div>
-<button class="signout" id="signout-button">Sign out</button>
-</div>
-</aside>
-<div class="portal-main">
-<header class="portal-header">
-<button class="mobile-menu" id="mobile-menu">☰</button>
-<div>
-<span class="eyebrow">Samara Family Portal</span>
-<h1 id="page-title">Overview</h1>
-</div>
-<div class="header-actions">
-<button id="refresh-button">↻ Refresh</button>
-<span class="secure-badge">Secure Access</span>
-</div>
-</header>
-<main class="content">
-<section class="view active" id="view-overview">
-<div class="resident-banner">
-<div class="resident-photo">SC</div>
-<div class="resident-info">
-<span class="status-pill">Currently at Samara</span>
-<h2 id="resident-name">Resident</h2>
-<p id="resident-summary">Patient information will load after secure sign-in.</p>
-<small id="resident-contact">Authorised family access</small>
-</div>
-<div class="condition-card" id="condition-card">
-<span>Current Condition</span>
-<strong>Loading…</strong>
-<small>Reading latest ERP information</small>
-</div>
-</div>
-<div class="metric-grid" id="overview-metrics">
-<article class="metric-card"><span>Medicines Today</span><strong>—</strong><small>Loading live ERP data</small></article>
-<article class="metric-card"><span>Daily Care</span><strong>—</strong><small>Loading live ERP data</small></article>
-<article class="metric-card"><span>Latest Vitals</span><strong>—</strong><small>Loading live ERP data</small></article>
-<article class="metric-card"><span>Outstanding</span><strong>—</strong><small>Loading live ERP data</small></article>
-</div>
-<div class="dashboard-grid">
-<section class="panel">
-<div class="panel-head"><div><span class="eyebrow">Today</span><h3>Care Timeline</h3></div><button data-open-view="care">View all</button></div>
-<div class="timeline-list" id="overview-timeline">
-<div class="pending"><span>—</span><p><b>Loading current care information…</b><small>Reading ERP records</small></p></div>
-</div>
-</section>
-<section class="panel">
-<div class="panel-head"><div><span class="eyebrow">Communication</span><h3>Latest Update</h3></div><button data-open-view="messages">Messages</button></div>
-<div class="update-card" id="latest-update">
-<div><b>Loading latest update…</b><small>Reading ERP records</small></div>
-</div>
-</section>
-</div>
-</section>
-<section class="view" id="view-care">
-<div class="section-heading"><div><span class="eyebrow">Daily Care</span><h2>Approved care updates</h2></div><span class="date-chip">Live ERP data</span></div>
-<div class="table-card">
-<table>
-<thead><tr><th>Care Activity</th><th>Shift</th><th>Status</th><th>Completed At</th><th>Remarks</th></tr></thead>
-<tbody id="care-body">
-<tr><td colspan="5">Loading live ERP data…</td></tr>
-</tbody>
-</table>
-</div>
-</section>
-<section class="view" id="view-moments">
-<div class="section-heading"><div><span class="eyebrow">Daily Moments</span><h2>A little glimpse of your loved one</h2></div><span class="date-chip">Available for 7 days</span></div>
-<div class="moments-intro"><div class="moments-heart">♥</div><div><b>Stay close, even from a distance.</b><p>Short moments shared by the Samara care team are available here for seven days. These private clips are visible only through authorised Family Portal access.</p></div></div>
-<div class="moments-grid" id="daily-moments-grid"><article class="moment-empty"><b>Loading Daily Moments…</b><small>Please wait while we securely check for recent clips.</small></article></div>
-<p class="moments-status" id="daily-moments-status"></p>
-</section>
-<section class="view" id="view-medicines">
-<div class="section-heading"><div><span class="eyebrow">Medication</span><h2>Current medicines and administration</h2></div><span class="date-chip">Live ERP data</span></div>
-<div class="table-card">
-<table>
-<thead><tr><th>Medicine</th><th>Strength</th><th>Frequency</th><th>Time</th><th>Food</th><th>Status</th></tr></thead>
-<tbody id="medicines-body">
-<tr><td colspan="6">Loading live ERP data…</td></tr>
-</tbody>
-</table>
-</div>
-<div class="notice">Only family-approved medication information is displayed here. Contact the Samara nursing team for clarifications or changes.</div>
-</section>
-<section class="view" id="view-vitals">
-<div class="section-heading"><div><span class="eyebrow">Vitals</span><h2>Recent recorded observations</h2></div><span class="date-chip">Live ERP data</span></div>
-<div class="vital-grid" id="vital-grid">
-<article><span>Latest Vitals</span><strong>—</strong><small>Loading live ERP data</small></article>
-</div>
-<div class="table-card">
-<table>
-<thead><tr><th>Date &amp; Time</th><th>BP</th><th>Pulse</th><th>SpO₂</th><th>Temperature</th><th>Recorded By</th></tr></thead>
-<tbody id="vitals-body">
-<tr><td colspan="6">Loading live ERP data…</td></tr>
-</tbody>
-</table>
-</div>
-</section>
-<section class="view" id="view-physio">
-<div class="section-heading"><div><span class="eyebrow">Physiotherapy</span><h2>Mobility and rehabilitation updates</h2></div><span class="date-chip">Live ERP data</span></div>
-<div class="panel" id="physio-plan">
-<h3>Current Plan</h3><p>Loading live ERP data…</p>
-</div>
-<div class="panel" id="physio-progress">
-<h3>Latest Progress Note</h3><p>Loading live ERP data…</p>
-</div>
-</section>
-<section class="view" id="view-billing">
-<div class="section-heading"><div><span class="eyebrow">Billing</span><h2>Bills, payments and outstanding amount</h2></div><button class="primary-small">Pay Online – Coming Soon</button></div>
-<div class="metric-grid billing-metrics" id="billing-metrics">
-<article class="metric-card"><span>Total Charges</span><strong>—</strong><small>Loading ERP ledger</small></article>
-<article class="metric-card"><span>Payments</span><strong>—</strong><small>Loading ERP ledger</small></article>
-<article class="metric-card"><span>Outstanding</span><strong>—</strong><small>Loading ERP ledger</small></article>
-</div>
-<div class="table-card">
-<table>
-<thead><tr><th>Date</th><th>Reference</th><th>Description</th><th>Debit</th><th>Credit</th><th>Action</th></tr></thead>
-<tbody id="billing-body">
-<tr><td colspan="6">Loading live ERP data…</td></tr>
-</tbody>
-</table>
-</div>
-</section>
-<section class="view" id="view-documents">
-<div class="section-heading"><div><span class="eyebrow">Documents</span><h2>Approved resident documents</h2></div><span class="date-chip">Live ERP data</span></div>
-<div class="document-grid" id="documents-grid">
-<article><span>▤</span><div><b>Loading documents…</b><small>Reading ERP records</small></div></article>
-</div>
-</section>
-<section class="view" id="view-enquiry">
-<div class="section-heading"><div><span class="eyebrow">Admission Enquiry</span><h2>Send an admission enquiry to Samara</h2></div><span class="date-chip">Admin / Manager review</span></div>
-<div class="dashboard-grid">
-<form class="panel" id="family-enquiry-form">
-<h3>Admission Enquiry</h3>
-<p>You may enquire for a family member or another person requiring assisted-living care. The request will be sent securely to Samara Admin / Manager.</p>
-<div class="form-grid">
-<label>Resident Name<input name="resident_name" required=""/></label>
-<label>Age<input name="age" min="0" max="120" type="number"/></label>
-<label>Contact Person<input name="contact_person" required=""/></label>
-<label>Mobile Number<input inputmode="tel" name="mobile" required=""/></label>
-<label>Care Type<select name="care_type"><option>Direct Elderly Care</option><option>Hospital Discharge Recovery</option><option>Short Stay / Respite</option><option>Long-Term Assisted Living</option><option>Physiotherapy Support</option><option>Special / Dedicated Nurse</option></select></label>
-<label>Preferred Room<select name="preferred_room"><option>Private</option><option>Twin Sharing</option><option>General</option><option>Need Guidance</option></select></label>
-<label class="full">Current Condition / Requirements<textarea name="condition" rows="5"></textarea></label>
-</div>
-<button class="btn btn-primary" type="submit">Send Admission Enquiry</button>
-<p class="form-status"></p>
-</form>
-<section class="panel">
-<h3>How it works</h3>
-<div class="request-list">
-<article><span class="status approved">1</span><div><b>Submit securely</b><small>The enquiry is recorded directly in Samara Care ERP.</small></div></article>
-<article><span class="status pending">2</span><div><b>Management review</b><small>Admin / Manager will see it immediately in Overview and Admission → Enquiries.</small></div></article>
-<article><span class="status pending">3</span><div><b>Follow-up</b><small>Samara will contact the mobile number entered in the enquiry.</small></div></article>
-</div>
-</section>
-</div>
-</section>
-<section class="view" id="view-visits">
-<div class="section-heading"><div><span class="eyebrow">Family Visits</span><h2>Request or review visits</h2></div><span class="date-chip">Subject to confirmation</span></div>
-<div class="dashboard-grid">
-<form class="panel" id="visit-request-form">
-<h3>Request a Visit</h3>
-<div class="form-grid">
-<label>Visitor Name<input name="visitor_name" required="" value="Vimala"/></label>
-<label>Mobile Number<input name="visitor_mobile" required="" value="9176735577"/></label>
-<label>Preferred Date<input name="visit_date" required="" type="date"/></label>
-<label>Preferred Time<select name="visit_time"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
-<label class="full">Message<textarea name="message" rows="4"></textarea></label>
-</div>
-<button class="btn btn-primary" type="submit">Send Visit Request</button>
-<p class="form-status"></p>
-</form>
-<section class="panel">
-<h3>Previous Requests</h3>
-<div class="request-list" id="family-visit-history"><p>Loading visit requests…</p></div>
-</section>
-</div>
-</section>
-<section class="view" id="view-messages">
-<div class="section-heading"><div><span class="eyebrow">Messages</span><h2>Secure family communication</h2></div><span class="date-chip">Secure ERP connection</span></div>
-<div class="message-layout">
-<div class="message-thread" id="family-message-thread"><p>Loading secure messages…</p></div>
-<form class="message-form" id="message-form">
-<textarea name="message" placeholder="Type a message to the care team" required="" rows="3"></textarea>
-<button class="btn btn-primary" type="submit">Send Message</button>
-<p class="form-status"></p>
-</form>
-</div>
-</section>
-</main>
-<section class="view" id="view-feedback">
-<div class="section-heading"><div><span class="eyebrow">Your Voice Matters</span><h2>Feedback to Samara</h2></div><span class="date-chip">Secure</span></div>
-<div class="family-feedback-layout">
-  <div class="panel family-feedback-panel">
-    <h3>Share Your Experience</h3>
-    <p>You may submit feedback as an authorised family member or on behalf of the resident.</p>
-    <form id="family-feedback-form">
-      <div class="family-feedback-grid">
-        <label>You Are<select name="respondent_type"><option>Family Member</option><option>Resident / Patient</option></select></label>
-        <label>Category<select name="category"><option>Overall Experience</option><option>Nursing Care</option><option>Caregiver Support</option><option>Food &amp; Diet</option><option>Physiotherapy</option><option>Rooms &amp; Facilities</option><option>Billing</option><option>Administration</option><option>Family Communication</option><option>Compliment</option><option>Suggestion</option><option>Complaint / Concern</option><option>Other</option></select></label>
-        <label class="span-2">Rating<div class="family-stars"><input id="f5" name="rating" type="radio" value="5"/><label for="f5">★</label><input id="f4" name="rating" type="radio" value="4"/><label for="f4">★</label><input id="f3" name="rating" type="radio" value="3"/><label for="f3">★</label><input id="f2" name="rating" type="radio" value="2"/><label for="f2">★</label><input id="f1" name="rating" type="radio" value="1"/><label for="f1">★</label></div></label>
-        <label class="span-2">Subject<input maxlength="180" name="subject"/></label>
-        <label class="span-2">Feedback<textarea maxlength="4000" name="message" required rows="6"></textarea></label>
-        <label class="span-2 feedback-check"><input checked name="consent" type="checkbox"/> I would like Samara to respond to this feedback in the Family Portal.</label>
-      </div>
-      <div class="form-status"></div>
-      <button class="primary" type="submit">Submit Feedback</button>
-    </form>
+  <div id="app-splash" class="app-splash" role="status" aria-live="polite" aria-label="Loading Samara Care ERP">
+    <div class="app-splash-orb app-splash-orb-one" aria-hidden="true"></div>
+    <div class="app-splash-orb app-splash-orb-two" aria-hidden="true"></div>
+    <div class="app-splash-card">
+      <div class="app-splash-logo" aria-hidden="true">SC</div>
+      <div class="app-splash-kicker">ASSISTED LIVING MANAGEMENT</div>
+      <h1>Samara Care ERP</h1>
+      <p class="app-splash-tagline">Compassion&nbsp; • &nbsp;Care&nbsp; • &nbsp;Comfort</p>
+      <div class="app-splash-progress" aria-hidden="true"><span></span></div>
+      <p class="app-splash-status">Preparing your secure workspace…</p>
+      <div class="app-splash-version">Version 2.8.76</div>
+    </div>
   </div>
-  <div class="panel family-feedback-history-panel">
-    <div class="family-feedback-history-head"><div><small>Previous Feedback</small><h3>Management Responses</h3></div><button type="button" id="family-feedback-refresh">↻ Refresh</button></div>
-    <div id="family-feedback-history"><p class="family-feedback-empty">Loading feedback history…</p></div>
-  </div>
-</div>
-</section></div>
-</section>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="./config.js"></script>
-<script src="./js/family-app-v1.0.6.js?v=1.0.9"></script>
+  <div id="root"></div>
+  <noscript>JavaScript is required to run Samara Care.</noscript>
+  <script src="./bootstrap-error.js?v=2.8.39"></script>
+  <script src="./config.js?v=2.8.39"></script>
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react@18.3.1/umd/react.production.min.js"></script>
+  <script crossorigin src="https://cdn.jsdelivr.net/npm/react-dom@18.3.1/umd/react-dom.production.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="./health-check.js?v=2.8.39"></script>
+  <script src="./app.js?v=2.8.76"></script>
 </body>
 </html>

@@ -1,0 +1,28 @@
+SAMARA CARE ERP 2.8.76 - CLINICAL DUE / ESCALATION
+
+1. Upload/replace in ERP root:
+   app.js
+   index.html
+   service-worker.js
+   styles.css (unchanged visually, included for package consistency)
+
+2. Supabase SQL Editor:
+   Run supabase/sql/82_clinical_due_escalation_v2.sql ONCE.
+   It is idempotent and does not delete existing patient/clinical data.
+
+What changes:
+- Pending MAR no longer says "On-time entry" before a dose is recorded.
+- Pending doses become Due Now / Overdue / Escalated / Critical Pending by elapsed time.
+- 15 min: overdue warning.
+- 30 min: Manager + Administrators in-app escalation.
+- 60 min: critical pending.
+- Nurse/Caregiver mobile gets repeated in-app/browser alerts while the app is running.
+- Manager/Admin alert list is limited to items escalated >=30 minutes.
+- Escalation audit is stored and resolved automatically when the underlying task is completed.
+- Daily Care gets an optional scheduled_time database field. Existing records fall back to 09:00 day / 21:00 night until specific times are configured.
+
+WhatsApp:
+- In-app escalation is active now.
+- Automatic WhatsApp escalation is intentionally not hard-coded to an unapproved template. It can be enabled when the Meta template for clinical escalation is approved/configured; this avoids failed or policy-invalid WhatsApp sends.
+
+IMPORTANT: Current trial/dummy clinical entries are preserved. No test data is deleted by this update.
