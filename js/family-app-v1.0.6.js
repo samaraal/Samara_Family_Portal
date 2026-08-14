@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.6";
+const FAMILY_PORTAL_VERSION = "1.0.7";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.

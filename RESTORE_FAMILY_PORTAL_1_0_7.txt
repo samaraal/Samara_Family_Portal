@@ -1,0 +1,1 @@
+Family Portal restore package. Upload/replace the contents of this package in the ROOT of the Samara Family Portal repository. Keep CNAME exactly: family.samaraassistedliving.com. Do not upload these files to the ERP repository.
