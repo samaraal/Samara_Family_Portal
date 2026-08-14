@@ -233,7 +233,7 @@ function initSamaraInaugurationInvitation(){
 
 (() => {
   'use strict';
-  const APP_VERSION = '2.8.76';
+  const APP_VERSION = '2.8.77';
   const APP_BUILD_DATE = '09-Aug-2026 Feedback v1.1 Verified Reply';
   const APP_SCHEMA_VERSION = '24';
 
@@ -2030,6 +2030,23 @@ Caring with Compassion. Living with Dignity.`;
       }
       if(list.some(a=>Number(a.overdue_minutes)>=escalationMinutes)){
         client.rpc('process_clinical_alert_escalations').then(()=>{});
+        // WhatsApp escalation is server-side and idempotent. The Edge Function
+        // sends only approved template messages and de-duplicates each alert/stage/recipient.
+        (async()=>{
+          try{
+            const {data:{session}}=await client.auth.getSession();
+            if(!session)return;
+            await fetch(`${cfg.supabaseUrl}/functions/v1/clinical-escalation-whatsapp`,{
+              method:'POST',
+              headers:{
+                'Content-Type':'application/json',
+                'Authorization':`Bearer ${session.access_token}`,
+                'apikey':cfg.supabasePublishableKey
+              },
+              body:JSON.stringify({action:'process'})
+            });
+          }catch(error){console.warn('Clinical WhatsApp escalation:',error?.message||error)}
+        })();
       }
     }
     React.useEffect(()=>{loadSettings()},[]);

@@ -1,0 +1,54 @@
+SAMARA CARE ERP 2.8.77 - CLINICAL ESCALATION + WHATSAPP API
+
+A. Upload/replace in ERP root:
+   app.js
+   index.html
+   service-worker.js
+   styles.css (included; no new visual dependency)
+
+B. Supabase SQL Editor:
+   1) If not already successful, run: supabase/sql/82_clinical_due_escalation_v2.sql
+   2) Then run: supabase/sql/83_clinical_whatsapp_escalation.sql
+
+C. Supabase Edge Functions:
+   Create/deploy function: clinical-escalation-whatsapp
+   Code file: supabase/functions/clinical-escalation-whatsapp/index.ts
+
+D. Existing WhatsApp secrets are reused:
+   WHATSAPP_ACCESS_TOKEN
+   WHATSAPP_PHONE_NUMBER_ID
+   WHATSAPP_GRAPH_API_VERSION (optional; defaults to v25.0)
+
+Add these secrets:
+   WHATSAPP_CLINICAL_TEMPLATE_NAME = samara_clinical_escalation
+   WHATSAPP_CLINICAL_TEMPLATE_LANGUAGE = en
+   WHATSAPP_CLINICAL_HEADER_IMAGE = https://samaraassistedliving.com/assets/samara-logo.png
+
+E. Meta WhatsApp Manager - create/approve template:
+   Name: samara_clinical_escalation
+   Suggested category: UTILITY
+   Header: IMAGE
+   Body:
+   Samara Care clinical alert: {{1}} for {{2}}, {{3}}. {{4}} was due at {{5}} and remains unresolved for {{6}} minutes. Status: {{7}}. Please review in Samara Care ERP.
+
+Template variable order:
+  1 Alert type (Medication / Daily Care / Vital Signs / Physiotherapy)
+  2 Patient name
+  3 Room/bed
+  4 Task/medicine title
+  5 Scheduled time
+  6 Overdue minutes
+  7 Escalation stage
+
+BEHAVIOUR
+- Nurse/Caregiver: due/overdue popup + sound/browser notification while ERP is active.
+- 30 minutes unresolved: WhatsApp template to every active Manager and Administrator with a mobile number in profiles.
+- 60 minutes unresolved: one second Critical Pending WhatsApp to the same recipients.
+- Duplicate messages are prevented per alert + stage + recipient.
+- Failed sends can retry after 5 minutes.
+- Resolution of the clinical item stops future escalation because it disappears from active alerts.
+- All WhatsApp attempts are audit logged in public.clinical_whatsapp_escalations.
+
+IMPORTANT
+The WhatsApp template must be APPROVED in Meta before automatic proactive messages can succeed.
+This update does not delete trial/dummy clinical data.
