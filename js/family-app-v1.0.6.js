@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.8";
+const FAMILY_PORTAL_VERSION = "1.0.9";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.
@@ -126,6 +126,7 @@ const supabaseClient = window.supabase && cfg.supabaseUrl && cfg.supabasePublish
   ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey) : null;
 
 const loginScreen = document.querySelector("#login-screen");
+const firstLoginScreen = document.querySelector("#first-login-screen");
 const portalScreen = document.querySelector("#portal-screen");
 const sidebar = document.querySelector(".sidebar");
 const pageTitle = document.querySelector("#page-title");
@@ -185,7 +186,7 @@ function buildTimeline(data){
 
 function renderDashboard(data){
   if(!data)return;
-  const p=data.patient||{}; if(familySession){familySession={...familySession,patient_name:p.patient_name||familySession.patient_name,room_no:p.room_no||familySession.room_no,bed_no:p.bed_no||familySession.bed_no,admission_date:p.admission_date||familySession.admission_date};applyFamilySession(familySession);sessionStorage.setItem('samara_family_session',JSON.stringify(familySession));}
+  const p=data.patient||{}; if(familySession){familySession={...familySession,patient_name:p.patient_name||familySession.patient_name,room_no:p.room_no||familySession.room_no,bed_no:p.bed_no||familySession.bed_no,admission_date:p.admission_date||familySession.admission_date};applyFamilySession(familySession);saveFamilySession();}
   const orders=data.medication_orders||[], mar=data.medication_administrations||[], careOrders=data.care_orders||[], careLogs=data.care_logs||[], vitals=data.vitals||[], billing=data.billing||[];
   const today=todayISO();
   const activeOrders=orders.filter(x=>x.is_active!==false && (!x.start_date||x.start_date<=today) && (!x.end_date||x.end_date>=today));
@@ -241,8 +242,52 @@ async function loadDashboard(showStatus=false){
     renderDashboard(data); loadDailyMoments(); if(btn&&showStatus)btn.textContent='✓ Updated'; setTimeout(()=>{if(btn)btn.textContent=old||'↻ Refresh';},1200); return true;
   }catch(err){console.error('Family dashboard load failed',err);if(btn)btn.textContent=old||'↻ Refresh';return false;}
 }
-function openPortal(session){familySession=session||familySession;if(familySession){sessionStorage.setItem('samara_family_session',JSON.stringify(familySession));applyFamilySession(familySession);}loginScreen.classList.add('hidden');portalScreen.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=setInterval(()=>loadDashboard(false),30000);}
-function closePortal(){portalScreen.classList.add('hidden');loginScreen.classList.remove('hidden');sessionStorage.removeItem('samara_family_session');familySession=null;clearInterval(refreshTimer);refreshTimer=null;}
+function saveFamilySession(){
+  if(!familySession)return;
+  const safe={...familySession};
+  delete safe.login_pin;
+  sessionStorage.setItem('samara_family_session',JSON.stringify(safe));
+}
+function openPortal(session){familySession=session||familySession;if(familySession){saveFamilySession();applyFamilySession(familySession);}loginScreen.classList.add('hidden');firstLoginScreen?.classList.add('hidden');portalScreen.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=setInterval(()=>loadDashboard(false),30000);}
+function showFirstLoginChange(){
+  if(!familySession)return;
+  loginScreen.classList.add('hidden');portalScreen.classList.add('hidden');firstLoginScreen?.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=null;
+  const welcome=document.querySelector('#first-login-welcome');if(welcome)welcome.textContent=`Welcome ${familySession.relative_name||'Family Member'}. Please replace the temporary PIN with your own private 6-digit PIN.`;
+  document.querySelector('#first-login-form')?.querySelector('input[name="new_pin"]')?.focus();
+}
+function closePortal(){portalScreen.classList.add('hidden');firstLoginScreen?.classList.add('hidden');loginScreen.classList.remove('hidden');sessionStorage.removeItem('samara_family_session');familySession=null;clearInterval(refreshTimer);refreshTimer=null;}
+async function firstLoginRequired(){
+  if(!familySession?.session_token||!familySession?.access_id||!supabaseClient)return false;
+  try{
+    const {data,error}=await supabaseClient.rpc('family_portal_first_login_status',{p_session_token:familySession.session_token,p_access_id:familySession.access_id});
+    if(error){console.warn('First-login status check unavailable',error);return false;}
+    const row=Array.isArray(data)?data[0]:data;
+    return Boolean(row?.must_change_pin);
+  }catch(error){console.warn('First-login status check failed',error);return false;}
+}
+
+document.querySelectorAll('[data-password-toggle]').forEach(button=>button.addEventListener('click',()=>{
+  const field=button.closest('.password-field')?.querySelector('input');if(!field)return;
+  const showing=field.type==='text';field.type=showing?'password':'text';button.classList.toggle('is-visible',!showing);button.textContent=showing?'◉':'◉';button.setAttribute('aria-label',showing?'Show Access PIN':'Hide Access PIN');
+}));
+
+document.querySelector('#first-login-signout')?.addEventListener('click',closePortal);
+document.querySelector('#first-login-form')?.addEventListener('submit',async event=>{
+  event.preventDefault();const form=event.currentTarget,status=document.querySelector('#first-login-status'),button=form.querySelector('button[type="submit"]');
+  const fd=new FormData(form),newPin=String(fd.get('new_pin')||'').trim(),confirmPin=String(fd.get('confirm_pin')||'').trim();
+  if(!/^\d{6}$/.test(newPin)){status.textContent='Please choose a new 6-digit Access PIN.';return;}
+  if(newPin!==confirmPin){status.textContent='The two PINs do not match.';return;}
+  if(familySession?.login_pin&&newPin===familySession.login_pin){status.textContent='Please choose a different PIN from the temporary PIN.';return;}
+  if(!familySession?.session_token||!familySession?.access_id){status.textContent='Your secure session has expired. Please sign in again.';return;}
+  button.disabled=true;status.textContent='Saving your new private PIN…';
+  try{
+    const {data,error}=await supabaseClient.rpc('family_portal_change_own_pin',{p_session_token:familySession.session_token,p_access_id:familySession.access_id,p_new_pin:newPin});
+    if(error)throw error;
+    const row=Array.isArray(data)?data[0]:data;if(row===false||row?.success===false)throw new Error(row?.message||'Unable to change PIN.');
+    form.reset();sessionStorage.removeItem('samara_family_session');familySession=null;firstLoginScreen?.classList.add('hidden');loginScreen.classList.remove('hidden');
+    const loginStatus=document.querySelector('#login-status');if(loginStatus)loginStatus.textContent='✓ New Access PIN saved successfully. Please sign in with your new PIN.';
+  }catch(error){console.error(error);status.textContent=error.message||'Unable to save the new PIN. Please try again.';}finally{button.disabled=false;}
+});
 
 document.querySelector('#login-form')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=new FormData(event.currentTarget);const status=document.querySelector('#login-status');const submit=event.currentTarget.querySelector('button[type="submit"]');
@@ -250,7 +295,8 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
   if(!patientId){status.textContent='Please enter the Patient ID.';return;}if(!/^\d{6}$/.test(pin)){status.textContent='Please enter the 6-digit Access PIN.';return;}if(!supabaseClient){status.textContent='Family Portal connection is unavailable. Please contact Samara.';return;}
   submit.disabled=true;status.textContent='Checking secure family access…';
   try{const {data,error}=await supabaseClient.rpc('family_portal_login_by_patient',{p_patient_id:patientId,p_pin:pin});if(error)throw error;const row=Array.isArray(data)?data[0]:data;if(!row){status.textContent='Patient ID or Access PIN is incorrect, or Family Portal access is disabled.';return;}
-    familySession={access_id:row.access_id,patient_uuid:row.patient_uuid,patient_code:row.patient_code,patient_name:row.patient_name,room_no:row.room_no,bed_no:row.bed_no,admission_date:row.admission_date,relative_name:row.relative_name,relationship:row.relationship,session_token:row.session_token};
+    familySession={access_id:row.access_id,patient_uuid:row.patient_uuid,patient_code:row.patient_code,patient_name:row.patient_name,room_no:row.room_no,bed_no:row.bed_no,admission_date:row.admission_date,relative_name:row.relative_name,relationship:row.relationship,session_token:row.session_token,login_pin:pin};
+    if(await firstLoginRequired()){status.textContent='';showFirstLoginChange();return;}
     const {data:dashboard,error:dashError}=await supabaseClient.rpc('family_portal_dashboard',{p_session_token:familySession.session_token});if(dashError)throw dashError;if(!dashboard)throw new Error('Unable to read the resident record.');
     openPortal(familySession);renderDashboard(dashboard);status.textContent='';
   }catch(err){console.error(err);status.textContent='Unable to load the resident information. Please contact Samara if the problem continues.';}finally{submit.disabled=false;}
@@ -295,7 +341,7 @@ async function loadFamilyMessages(){
  const host=document.querySelector('#family-message-thread');if(!host||!familySession?.session_token)return;host.innerHTML='<p>Loading secure messages…</p>';try{const {data,error}=await supabaseClient.rpc('family_list_messages',{p_session_token:familySession.session_token});if(error)throw error;const rows=Array.isArray(data)?data:[];host.innerHTML=rows.length?rows.map(r=>`<div class="message ${r.direction==='FAMILY_TO_ERP'?'sent':'received'}"><b>${esc(r.direction==='FAMILY_TO_ERP'?'You':(r.sender_name||'Samara Team'))}</b><small>${esc(dateTimeIN(r.created_at))}</small><p>${esc(r.message||'')}</p></div>`).join(''):'<p>No messages yet. You can send a secure message below.</p>';host.scrollTop=host.scrollHeight;}catch(e){host.innerHTML=`<p>${esc(e.message||'Unable to load messages.')}</p>`;}
 }
 document.querySelector('#message-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,s=form.querySelector('.form-status'),b=form.querySelector('button'),text=form.querySelector('textarea');try{b.disabled=true;s.textContent='Sending securely…';const {error}=await supabaseClient.rpc('family_send_message',{p_session_token:familySession.session_token,p_message:text.value});if(error)throw error;text.value='';s.textContent='✓ Message sent securely to Samara.';await loadFamilyMessages();}catch(e){s.textContent=e.message||'Unable to send message.';}finally{b.disabled=false;}});
-try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;openPortal(saved);loadDashboard(false).then(ok=>{if(!ok)closePortal();});}}catch(_){sessionStorage.removeItem('samara_family_session');}
+try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;(async()=>{if(await firstLoginRequired()){showFirstLoginChange();return;}openPortal(saved);const ok=await loadDashboard(false);if(!ok)closePortal();})();}}catch(_){sessionStorage.removeItem('samara_family_session');}
 initSamaraInaugurationInvitation();
 console.info(`Samara Family Portal ${FAMILY_PORTAL_VERSION}`);
 

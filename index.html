@@ -34,7 +34,7 @@
               <input name="patient_id" placeholder="Example: PAT-2026-08-0002" required=""/>
 </label>
 <label>Access PIN
-              <input inputmode="numeric" maxlength="6" name="pin" placeholder="6-digit PIN" required=""/>
+              <span class="password-field"><input autocomplete="current-password" inputmode="numeric" maxlength="6" name="pin" placeholder="6-digit PIN" required="" type="password"/><button aria-label="Show Access PIN" class="password-eye" data-password-toggle="pin" type="button">◉</button></span>
 </label>
 <button class="btn btn-primary" type="submit">Sign in securely</button>
 <p class="form-status" id="login-status"></p>
@@ -43,11 +43,41 @@
 </div>
 </div>
 </section>
+<section class="login-screen hidden" id="first-login-screen">
+<div class="login-shell first-login-shell">
+<div class="login-brand">
+<img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
+<span class="eyebrow">First Login Security</span>
+<h1>Create your private Access PIN.</h1>
+<p>The PIN sent by Samara is temporary. For privacy and security, please replace it with a new 6-digit PIN before entering the Family Portal.</p>
+<div class="login-benefits">
+<div><span>✓</span><p><b>One-time change</b><small>Required only after a new or reset temporary PIN</small></p></div>
+<div><span>🔒</span><p><b>Private access</b><small>Do not share your new PIN with anyone</small></p></div>
+</div>
+</div>
+<div class="login-card first-login-card">
+<span class="eyebrow">Secure Setup</span>
+<h2>Set a new PIN</h2>
+<p id="first-login-welcome">Please create a new private 6-digit Access PIN.</p>
+<form id="first-login-form">
+<label>New Access PIN
+  <span class="password-field"><input autocomplete="new-password" inputmode="numeric" maxlength="6" name="new_pin" pattern="[0-9]{6}" placeholder="New 6-digit PIN" required type="password"/><button aria-label="Show new Access PIN" class="password-eye" data-password-toggle="new_pin" type="button">◉</button></span>
+</label>
+<label>Confirm New Access PIN
+  <span class="password-field"><input autocomplete="new-password" inputmode="numeric" maxlength="6" name="confirm_pin" pattern="[0-9]{6}" placeholder="Re-enter new PIN" required type="password"/><button aria-label="Show confirmed Access PIN" class="password-eye" data-password-toggle="confirm_pin" type="button">◉</button></span>
+</label>
+<button class="btn btn-primary" type="submit">Save New PIN</button>
+<p class="form-status" id="first-login-status"></p>
+</form>
+<button class="back-link first-login-signout" id="first-login-signout" type="button">← Sign out and return to login</button>
+</div>
+</div>
+</section>
 <section class="portal-screen hidden" id="portal-screen">
 <aside class="sidebar">
 <div class="sidebar-brand">
 <img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
-<small>Family Portal v1.0.8</small>
+<small>Family Portal v1.0.9</small>
 </div>
 <nav class="side-nav">
 <button class="active" data-view="overview"><span>⌂</span> Overview</button>
@@ -283,6 +313,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./js/family-app-v1.0.6.js?v=1.0.11"></script>
+<script src="./js/family-app-v1.0.6.js?v=1.0.12"></script>
 </body>
 </html>
