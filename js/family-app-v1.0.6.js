@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.7";
+const FAMILY_PORTAL_VERSION = "1.0.8";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.
@@ -195,12 +195,28 @@ function renderDashboard(data){
   const latest=vitals[0]||{}; const bill=billingSummary(billing);
   const bp=(latest.systolic!=null||latest.diastolic!=null)?`${latest.systolic??'—'}/${latest.diastolic??'—'}`:'—/—';
   const vitalSmall=latest.recorded_at?`${latest.blood_sugar!=null?`${latest.blood_sugar_type||'Sugar'} ${latest.blood_sugar} · `:''}Recorded ${timeIN(latest.recorded_at)}`:'No vital signs recorded';
-  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${completedCare} / ${careOrders.filter(x=>x.is_active!==false).length}</strong><small>${careOrders.length?'Today\'s recorded care':'No care plan recorded'}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
+  const activeCareOrders=careOrders.filter(x=>x.is_active!==false);
+  const careMetricValue=activeCareOrders.length?`${completedCare} / ${activeCareOrders.length}`:`${completedCare}`;
+  const careMetricNote=careLogs.length?`${careLogs.length} care activit${careLogs.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
+  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
   const cond=document.querySelector('#condition-card');if(cond){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
   const timeline=buildTimeline(data);const ot=document.querySelector('#overview-timeline');if(ot)ot.innerHTML=timeline.length?timeline.slice(0,6).map(x=>`<div class="done"><span>${esc(timeIN(x.at))}</span><p><b>${esc(x.title)}</b><small>${esc(x.note||'')}</small></p></div>`).join(''):'<div class="pending"><span>—</span><p><b>No care updates recorded yet</b><small>New ERP entries will appear here after refresh.</small></p></div>';
   const lu=document.querySelector('#latest-update');if(lu){const x=timeline[0];lu.innerHTML=x?`<span class="avatar small">SC</span><div><b>Latest ERP Update</b><small>${esc(dateTimeIN(x.at))}</small><p>${esc(x.title)}${x.note?` — ${esc(x.note)}`:''}</p></div>`:'<div><b>No updates recorded yet</b><small>Updates will appear from the Samara ERP.</small></div>';}
 
-  const cb=document.querySelector('#care-body');if(cb)cb.innerHTML=careOrders.length?careOrders.map(o=>{const log=careLogs.find(l=>l.care_order_id===o.id);return `<tr><td>${esc(o.care_type||'Care')}</td><td>${esc(o.shift||'—')}</td><td><span class="status ${log&&String(log.status).toLowerCase()==='completed'?'done':'pending'}">${esc(log?.status||'Pending')}</span></td><td>${esc(log?.completed_at?timeIN(log.completed_at):'—')}</td><td>${esc(log?.remarks||o.instruction||'—')}</td></tr>`;}).join(''):emptyRow(5,'No care plan has been recorded for this resident.');
+  const cb=document.querySelector('#care-body');
+  if(cb){
+    const careRows=[];
+    const sortedLogs=[...careLogs].sort((a,b)=>new Date(b.completed_at||b.created_at||0)-new Date(a.completed_at||a.created_at||0));
+    sortedLogs.forEach(log=>{
+      const order=careOrders.find(o=>o.id===log.care_order_id);
+      const status=log.status||'Recorded';
+      careRows.push(`<tr><td>${esc(log.care_type||order?.care_type||'Daily care')}</td><td>${esc(log.shift||order?.shift||'—')}</td><td><span class="status ${String(status).toLowerCase()==='completed'?'done':'pending'}">${esc(status)}</span></td><td>${esc(log.completed_at?timeIN(log.completed_at):(log.created_at?timeIN(log.created_at):'—'))}</td><td>${esc(log.remarks||order?.instruction||'—')}</td></tr>`);
+    });
+    activeCareOrders.filter(order=>!careLogs.some(log=>log.care_order_id===order.id)).forEach(order=>{
+      careRows.push(`<tr><td>${esc(order.care_type||'Care')}</td><td>${esc(order.shift||'—')}</td><td><span class="status pending">Pending</span></td><td>—</td><td>${esc(order.instruction||'—')}</td></tr>`);
+    });
+    cb.innerHTML=careRows.length?careRows.join(''):emptyRow(5,'No daily care plan or activity has been recorded for this resident.');
+  }
   const mb=document.querySelector('#medicines-body');if(mb)mb.innerHTML=activeOrders.length?activeOrders.map(o=>`<tr><td>${esc(o.medicine_name||'—')}</td><td>${esc(o.strength||'—')}</td><td>${esc(o.frequency||'—')}</td><td>${esc((o.scheduled_times||[]).join(', ')||'—')}</td><td>${esc(o.food_instruction||'—')}</td><td><span class="status">${esc(medStatusFor(o,mar))}</span></td></tr>`).join(''):emptyRow(6,'No active medicine orders.');
 
   const vg=document.querySelector('#vital-grid');if(vg)vg.innerHTML=`<article><span>Blood Pressure</span><strong>${esc(bp)}</strong><small>${latest.alert_level||'—'}</small></article><article><span>Pulse</span><strong>${latest.pulse!=null?`${latest.pulse} bpm`:'—'}</strong><small>${latest.recorded_at?timeIN(latest.recorded_at):'Not recorded'}</small></article><article><span>SpO₂</span><strong>${latest.spo2!=null?`${latest.spo2}%`:'—'}</strong><small>${latest.recorded_at?dateIN(latest.recorded_at):'Not recorded'}</small></article><article><span>${esc(latest.blood_sugar_type||'Blood Sugar')}</span><strong>${latest.blood_sugar!=null?esc(latest.blood_sugar):'—'}</strong><small>${latest.remarks?esc(latest.remarks):'Latest ERP value'}</small></article>`;
