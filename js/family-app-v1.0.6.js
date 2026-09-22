@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.14";
+const FAMILY_PORTAL_VERSION = "1.0.15";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.
@@ -305,6 +305,47 @@ function renderDashboard(data){
   const docs=data.documents||[]; const dg=document.querySelector('#documents-grid');if(dg)dg.innerHTML=docs.length?docs.map(x=>`<article><span>▤</span><div><b>${esc(x.document_type||'Document')}</b><small>${esc(x.document_name||'File')} · ${esc(dateIN(x.created_at))}</small></div></article>`).join(''):'<article><span>▤</span><div><b>No documents available</b><small>No family-visible document metadata recorded.</small></div></article>';
 }
 
+
+
+function familyLedgerPdf(){
+  const data=latestDashboardData||{}, p=data.patient||{}, billing=[...(data.billing||[])];
+  if(!billing.length){alert('No patient ledger transactions are available to download.');return;}
+  const bill=billingSummary(billing);
+  const sorted=billing.slice().sort((a,b)=>new Date(a.transaction_date||a.created_at||0)-new Date(b.transaction_date||b.created_at||0));
+  let running=0;
+  const rows=sorted.map((x,i)=>{
+    const type=String(x.transaction_type||'').toLowerCase();
+    const amount=Number(x.amount||0);
+    const isDebit=type==='charge'||type==='refund';
+    const isCredit=type==='payment'||type==='discount'||type==='advance';
+    if(isDebit)running+=amount; else if(isCredit)running-=amount;
+    const particulars=[x.category,x.description].filter(Boolean).join(' · ')||x.transaction_type||'Transaction';
+    const ref=x.reference_no||x.reference||x.payment_reference||x.bill_number||'—';
+    return `<tr><td>${i+1}</td><td>${esc(dateIN(x.transaction_date||x.created_at))}</td><td>${esc(particulars)}</td><td>${esc(ref)}</td><td class="num">${isDebit?money(amount):'—'}</td><td class="num">${isCredit?money(amount):'—'}</td><td class="num">${money(running)}</td></tr>`;
+  }).join('');
+  const patientName=p.patient_name||familySession?.patient_name||'Resident';
+  const residentId=p.patient_code||p.patient_id||familySession?.patient_code||'—';
+  const room=[p.room_no||familySession?.room_no,p.bed_no||familySession?.bed_no].filter(Boolean).join(' / ')||'—';
+  const admission=p.admission_date||familySession?.admission_date;
+  const generated=new Date().toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+  const logo=new URL('./assets/samara-logo.png',window.location.href).href;
+  const safeFile=String(patientName).replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(safeFile)} Patient Ledger</title><style>
+    @page{size:A4;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#392531;margin:0;font-size:10px}.head{display:flex;align-items:center;border-bottom:3px solid #b70b61;padding-bottom:10px;margin-bottom:12px}.logo{width:120px;height:auto}.headtext{flex:1;text-align:center}.headtext h1{font-size:18px;color:#b70b61;margin:0 0 3px}.headtext h2{font-size:16px;margin:0}.headtext p{margin:3px 0 0;color:#6f5b65}.meta{border:1px solid #edc8da;border-radius:8px;padding:9px 11px;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:12px}.meta b{display:inline-block;min-width:92px}.section{font-size:12px;color:#9d0c53;font-weight:700;margin:12px 0 6px}table{width:100%;border-collapse:collapse;table-layout:fixed}th{background:#f8e3ed;color:#6c1642;border:1px solid #dca9c2;padding:6px 5px;text-align:left}td{border:1px solid #ead5df;padding:6px 5px;vertical-align:top;word-wrap:break-word}.num{text-align:right;white-space:nowrap}.summary{width:48%;margin:12px 0 0 auto}.summary td:first-child{font-weight:700}.summary tr:last-child td{font-size:12px;font-weight:800;color:#9d0c53;border-top:2px solid #b70b61}.note{margin-top:14px;border:1px solid #edc8da;border-radius:7px;padding:8px}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;margin-top:34px;text-align:center}.sign div{border-top:1px solid #5d4a53;padding-top:7px}.foot{margin-top:22px;border-top:1px solid #edc8da;padding-top:8px;text-align:center;color:#6f5b65;font-size:9px}@media print{.no-print{display:none}}
+  </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Assisted Living Management System</p><h2>PATIENT ACCOUNT LEDGER</h2><p>Generated on: ${esc(generated)}</p></div></div>
+  <div class="meta"><div><b>Patient Name</b> ${esc(patientName)}</div><div><b>Resident ID</b> ${esc(residentId)}</div><div><b>Room / Bed</b> ${esc(room)}</div><div><b>Admission Date</b> ${esc(dateIN(admission))}</div></div>
+  <div class="section">Patient Ledger</div><table><thead><tr><th style="width:5%">Sl.</th><th style="width:11%">Date</th><th style="width:35%">Particulars</th><th style="width:12%">Reference</th><th style="width:12%">Debit</th><th style="width:12%">Credit</th><th style="width:13%">Balance</th></tr></thead><tbody>${rows}</tbody></table>
+  <table class="summary"><tr><td>Total Charges</td><td class="num">${money(bill.charges)}</td></tr><tr><td>Payments Received</td><td class="num">${money(bill.payments)}</td></tr><tr><td>Discounts</td><td class="num">${money(bill.discounts)}</td></tr><tr><td>Refunds</td><td class="num">${money(bill.refunds)}</td></tr><tr><td>OUTSTANDING BALANCE</td><td class="num">${money(bill.outstanding)}</td></tr></table>
+  <div class="note"><b>Important:</b> This ledger reflects financial transactions recorded in the Samara Care ERP as at ${esc(generated)}.</div><div class="sign"><div>Prepared By</div><div>Accounts / Administrator</div><div>Patient / Attendant</div></div><div class="foot">Samara Health Care LLP · Computer-generated patient ledger · No manual alteration permitted</div><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`;
+  const w=window.open('','_blank');
+  if(!w){alert('Please allow pop-ups to download the Patient Ledger PDF.');return;}
+  w.document.open();w.document.write(html);w.document.close();
+}
+
+function initFamilyLedgerPdf(){
+  document.querySelector('#family-ledger-pdf')?.addEventListener('click',familyLedgerPdf);
+}
+
 async function loadDashboard(showStatus=false){
   if(!familySession?.session_token||!supabaseClient)return false;
   const btn=document.querySelector('#refresh-button');const old=btn?.textContent;if(btn&&showStatus)btn.textContent='Refreshing…';
@@ -568,3 +609,5 @@ async function loadDailyMoments(){
     if(status)status.textContent=error.message||'Unable to load Daily Moments.';
   }
 }
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initFamilyLedgerPdf);else initFamilyLedgerPdf();
