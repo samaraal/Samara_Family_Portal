@@ -133,6 +133,9 @@ const pageTitle = document.querySelector("#page-title");
 let familySession = null;
 let refreshTimer = null;
 let adminPreviewMode = false;
+let latestDashboardData = null;
+let activityTimelineDate = todayISO();
+let activityTimelineCategory = 'all';
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const money = value => `₹${Number(value || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
@@ -177,9 +180,10 @@ function billingSummary(rows){let charges=0,payments=0,discounts=0,refunds=0;for
 
 function buildTimeline(data){
   const events=[];
+  const push=(category,at,title,note='',status='')=>{if(at)events.push({category,at,title,note,status});};
   const medicationOrders=data.medication_orders||[];
   const medicationOrderById=new Map(medicationOrders.map(order=>[String(order.id),order]));
-  (data.care_logs||[]).forEach(x=>events.push({at:x.completed_at||x.created_at,title:`${x.care_type||'Daily care'} — ${x.status||'Recorded'}`,note:x.remarks||x.shift||''}));
+  (data.care_logs||[]).forEach(x=>push('care',x.completed_at||x.recorded_at||x.created_at,`${x.care_type||x.task_name||'Daily care'} — ${x.status||'Recorded'}`,x.remarks||x.shift||'',x.status||''));
   (data.medication_administrations||[]).forEach(x=>{
     const order=x.order_id!=null?medicationOrderById.get(String(x.order_id)):null;
     const medicineName=String(x.medicine_name||order?.medicine_name||'').trim();
@@ -188,16 +192,39 @@ function buildTimeline(data){
     const status=x.status||'Recorded';
     const scheduled=x.scheduled_time||x.scheduled_at||'';
     const note=[scheduled?`Scheduled ${scheduled}`:'',x.remarks||''].filter(Boolean).join(' · ');
-    events.push({at:x.administered_at||x.created_at,title:`Medicine: ${medicineDetails||'Medicine details unavailable'} — ${status}`,note});
+    push('medicines',x.administered_at||x.created_at,`Medicine: ${medicineDetails||'Medicine details unavailable'} — ${status}`,note,status);
   });
-  (data.vitals||[]).forEach(x=>{const bits=[];if(x.systolic!=null||x.diastolic!=null)bits.push(`BP ${x.systolic??'—'}/${x.diastolic??'—'}`);if(x.pulse!=null)bits.push(`Pulse ${x.pulse}`);if(x.spo2!=null)bits.push(`SpO₂ ${x.spo2}%`);if(x.blood_sugar!=null)bits.push(`${x.blood_sugar_type||'Sugar'} ${x.blood_sugar}`);events.push({at:x.recorded_at,title:'Vitals recorded',note:bits.join(' · ')||x.remarks||'Observation recorded'});});
-  (data.physio_sessions||[]).forEach(x=>events.push({at:x.session_at||x.created_at,title:`Physiotherapy — ${x.status||'Recorded'}`,note:x.notes||x.physiotherapist_name||''}));
-  (data.meals||[]).forEach(x=>events.push({at:x.served_at,title:`${x.meal_type||'Meal'} — ${x.consumption_status||'Recorded'}`,note:[x.menu,x.remarks].filter(Boolean).join(' · ')}));
+  (data.vitals||[]).forEach(x=>{const bits=[];if(x.systolic!=null||x.diastolic!=null)bits.push(`BP ${x.systolic??'—'}/${x.diastolic??'—'}`);if(x.pulse!=null)bits.push(`Pulse ${x.pulse}`);if(x.spo2!=null)bits.push(`SpO₂ ${x.spo2}%`);if(x.temperature!=null)bits.push(`Temp ${x.temperature}`);if(x.blood_sugar!=null)bits.push(`${x.blood_sugar_type||'Sugar'} ${x.blood_sugar}`);push('vitals',x.recorded_at,'Vitals recorded',bits.join(' · ')||x.remarks||'Observation recorded');});
+  (data.physio_sessions||[]).forEach(x=>push('physiotherapy',x.session_at||x.completed_at||x.created_at||x.session_date,`Physiotherapy: ${x.therapy_type||x.session_type||'Session'} — ${x.status||'Recorded'}`,x.notes||x.physiotherapist_name||'',x.status||''));
+  (data.meals||data.meal_records||[]).forEach(x=>push('food',x.served_at||x.recorded_at||x.created_at||(x.meal_date?`${x.meal_date}T12:00:00`:null),`Food & Diet: ${x.meal_type||x.item_type||'Meal'} — ${x.consumption_status||x.status||'Recorded'}`,[x.menu||x.item_name,x.quantity,x.remarks].filter(Boolean).join(' · '),x.consumption_status||x.status||''));
+  const nursing=[...(data.nursing_procedures||[]),...(data.nursing_procedure_logs||[]),...(data.procedure_logs||[])];
+  nursing.forEach(x=>push('nursing',x.completed_at||x.performed_at||x.recorded_at||x.created_at,`Nursing Procedure: ${x.procedure_name||x.procedure_type||x.nursing_procedure||x.name||'Procedure'} — ${x.status||'Recorded'}`,[x.details||x.notes||x.remarks,x.duration?`Duration ${x.duration}`:''].filter(Boolean).join(' · '),x.status||''));
+  (data.daily_moments||data.moments||[]).forEach(x=>push('moments',x.created_at||x.recorded_at,'Daily Moment',x.caption||'A moment shared by Samara'));
   return events.filter(x=>x.at).sort((a,b)=>new Date(b.at)-new Date(a.at));
+}
+
+const ACTIVITY_CATEGORIES=[
+  ['all','All'],['medicines','Medicines'],['vitals','Vitals'],['nursing','Nursing Procedures'],['care','Care'],['food','Food & Diet'],['physiotherapy','Physiotherapy'],['moments','Daily Moments']
+];
+function activityDateISO(value){const d=new Date(value);if(Number.isNaN(d.getTime()))return '';return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function shiftActivityDate(days){const d=new Date(`${activityTimelineDate}T12:00:00`);d.setDate(d.getDate()+days);activityTimelineDate=activityDateISO(d);renderActivityTimeline();}
+function openActivityTimeline(){activityTimelineDate=todayISO();activityTimelineCategory='all';let modal=document.querySelector('#activity-timeline-modal');if(!modal){modal=document.createElement('div');modal.id='activity-timeline-modal';modal.className='activity-modal';modal.innerHTML=`<div class="activity-modal-card"><div class="activity-modal-head"><div><span class="eyebrow">Patient Activity</span><h2>Care Timeline — View All</h2></div><button type="button" class="activity-close" aria-label="Close">×</button></div><div id="activity-timeline-controls"></div><div id="activity-timeline-results"></div></div>`;document.body.appendChild(modal);modal.querySelector('.activity-close').addEventListener('click',()=>modal.classList.remove('open'));modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open');});}modal.classList.add('open');renderActivityTimeline();}
+function renderActivityTimeline(){
+  const modal=document.querySelector('#activity-timeline-modal');if(!modal)return;
+  const controls=modal.querySelector('#activity-timeline-controls'),results=modal.querySelector('#activity-timeline-results');
+  controls.innerHTML=`<div class="activity-datebar"><button type="button" data-day="-1">← Previous Day</button><label>Date <input type="date" value="${esc(activityTimelineDate)}" max="${esc(todayISO())}"></label><button type="button" data-today="1">Today</button><button type="button" data-day="1" ${activityTimelineDate>=todayISO()?'disabled':''}>Next Day →</button></div><div class="activity-filters">${ACTIVITY_CATEGORIES.map(([key,label])=>`<button type="button" data-category="${key}" class="${activityTimelineCategory===key?'active':''}">${esc(label)}</button>`).join('')}</div>`;
+  controls.querySelectorAll('[data-day]').forEach(b=>b.addEventListener('click',()=>shiftActivityDate(Number(b.dataset.day))));
+  controls.querySelector('[data-today]').addEventListener('click',()=>{activityTimelineDate=todayISO();renderActivityTimeline();});
+  controls.querySelector('input[type="date"]').addEventListener('change',e=>{activityTimelineDate=e.target.value||todayISO();renderActivityTimeline();});
+  controls.querySelectorAll('[data-category]').forEach(b=>b.addEventListener('click',()=>{activityTimelineCategory=b.dataset.category;renderActivityTimeline();}));
+  const all=buildTimeline(latestDashboardData||{});const rows=all.filter(x=>activityDateISO(x.at)===activityTimelineDate&&(activityTimelineCategory==='all'||x.category===activityTimelineCategory));
+  const label=ACTIVITY_CATEGORIES.find(x=>x[0]===activityTimelineCategory)?.[1]||'All';
+  results.innerHTML=`<div class="activity-result-head"><strong>${esc(dateIN(activityTimelineDate))}</strong><span>${esc(label)} · ${rows.length} record${rows.length===1?'':'s'}</span></div>${rows.length?`<div class="activity-list">${rows.map(x=>`<article class="activity-row"><div class="activity-time">${esc(timeIN(x.at))}</div><div class="activity-copy"><span class="activity-badge ${esc(x.category)}">${esc(ACTIVITY_CATEGORIES.find(c=>c[0]===x.category)?.[1]||x.category)}</span><b>${esc(x.title)}</b>${x.note?`<small>${esc(x.note)}</small>`:''}</div></article>`).join('')}</div>`:`<div class="activity-empty">No ${activityTimelineCategory==='all'?'patient activity':label.toLowerCase()} records for this date.</div>`}`;
 }
 
 function renderDashboard(data){
   if(!data)return;
+  latestDashboardData=data;
   const p=data.patient||{}; if(familySession){familySession={...familySession,patient_name:p.patient_name||familySession.patient_name,room_no:p.room_no||familySession.room_no,bed_no:p.bed_no||familySession.bed_no,admission_date:p.admission_date||familySession.admission_date};applyFamilySession(familySession);saveFamilySession();}
   const orders=data.medication_orders||[], mar=data.medication_administrations||[], careOrders=data.care_orders||[], careLogs=data.care_logs||[], vitals=data.vitals||[], billing=data.billing||[];
   const today=todayISO();
@@ -348,7 +375,7 @@ document.querySelector('#signout-button')?.addEventListener('click',closePortal)
 document.querySelector('#mobile-menu')?.addEventListener('click',()=>sidebar.classList.toggle('open'));
 function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
 document.querySelectorAll('.side-nav button[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
-document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.openView)));
+document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.openView==='activity'){openActivityTimeline();return;}showView(b.dataset.openView);}));
 document.querySelector('#refresh-button')?.addEventListener('click',()=>loadDashboard(true));
 
 // Admission enquiries are created only from the public Website or secure Family Portal.
