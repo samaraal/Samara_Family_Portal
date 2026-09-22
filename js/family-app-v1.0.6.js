@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.10";
+const FAMILY_PORTAL_VERSION = "1.0.14";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.
@@ -136,6 +136,8 @@ let adminPreviewMode = false;
 let latestDashboardData = null;
 let activityTimelineDate = todayISO();
 let activityTimelineCategory = 'all';
+let overviewTimelineCategory = 'all';
+let intelligentReportDate = todayISO();
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const money = value => `₹${Number(value || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
@@ -222,6 +224,37 @@ function renderActivityTimeline(){
   results.innerHTML=`<div class="activity-result-head"><strong>${esc(dateIN(activityTimelineDate))}</strong><span>${esc(label)} · ${rows.length} record${rows.length===1?'':'s'}</span></div>${rows.length?`<div class="activity-list">${rows.map(x=>`<article class="activity-row"><div class="activity-time">${esc(timeIN(x.at))}</div><div class="activity-copy"><span class="activity-badge ${esc(x.category)}">${esc(ACTIVITY_CATEGORIES.find(c=>c[0]===x.category)?.[1]||x.category)}</span><b>${esc(x.title)}</b>${x.note?`<small>${esc(x.note)}</small>`:''}</div></article>`).join('')}</div>`:`<div class="activity-empty">No ${activityTimelineCategory==='all'?'patient activity':label.toLowerCase()} records for this date.</div>`}`;
 }
 
+function renderOverviewTimeline(){
+  const host=document.querySelector('#overview-timeline');if(!host)return;
+  const today=todayISO();
+  const rows=buildTimeline(latestDashboardData||{}).filter(x=>activityDateISO(x.at)===today&&(overviewTimelineCategory==='all'||x.category===overviewTimelineCategory));
+  host.innerHTML=rows.length?rows.slice(0,6).map(x=>`<div class="done"><span>${esc(timeIN(x.at))}</span><p><b>${esc(x.title)}</b><small>${esc(x.note||'')}</small></p></div>`).join(''):'<div class="pending"><span>—</span><p><b>No records in this category today</b><small>Choose another category or View all for date-wise history.</small></p></div>';
+  document.querySelectorAll('#overview-activity-filters [data-overview-category]').forEach(b=>b.classList.toggle('active',b.dataset.overviewCategory===overviewTimelineCategory));
+}
+function initOverviewActivityFilters(){
+  const host=document.querySelector('#overview-activity-filters');if(!host)return;
+  host.innerHTML=ACTIVITY_CATEGORIES.map(([key,label])=>`<button type="button" data-overview-category="${key}" class="${overviewTimelineCategory===key?'active':''}">${esc(label)}</button>`).join('');
+  host.querySelectorAll('[data-overview-category]').forEach(b=>b.addEventListener('click',()=>{overviewTimelineCategory=b.dataset.overviewCategory;renderOverviewTimeline();}));
+}
+function intelligentReportRows(date){return buildTimeline(latestDashboardData||{}).filter(x=>activityDateISO(x.at)===date);}
+function renderIntelligentReport(){
+  const host=document.querySelector('#intelligent-report-content');if(!host)return;
+  const data=latestDashboardData||{}, rows=intelligentReportRows(intelligentReportDate), p=data.patient||{};
+  const vitals=(data.vitals||[]).filter(x=>activityDateISO(x.recorded_at)===intelligentReportDate);
+  const meds=rows.filter(x=>x.category==='medicines'), nursing=rows.filter(x=>x.category==='nursing'), care=rows.filter(x=>x.category==='care'), food=rows.filter(x=>x.category==='food'), physio=rows.filter(x=>x.category==='physiotherapy'), moments=rows.filter(x=>x.category==='moments');
+  const section=(title,items)=>`<section class="family-report-section"><h3>${esc(title)}</h3>${items.length?items.map(x=>`<article><b>${esc(timeIN(x.at))} · ${esc(x.title)}</b>${x.note?`<small>${esc(x.note)}</small>`:''}</article>`).join(''):'<p>No records for this date.</p>'}</section>`;
+  host.innerHTML=`<div class="family-report-cover"><span>Samara Assisted Living</span><h2>Intelligent Patient Report</h2><b>${esc(p.patient_name||familySession?.patient_name||'Resident')}</b><small>${esc(p.patient_code||familySession?.patient_code||'')} · ${esc(dateIN(intelligentReportDate))}</small><p>View-only family report generated from the resident's Family Portal-visible ERP records.</p></div>
+  <div class="family-report-summary"><article><span>Medicines</span><strong>${meds.length}</strong></article><article><span>Vitals</span><strong>${vitals.length}</strong></article><article><span>Nursing Procedures</span><strong>${nursing.length}</strong></article><article><span>Care</span><strong>${care.length}</strong></article><article><span>Food & Diet</span><strong>${food.length}</strong></article></div>
+  ${section('Medicines',meds)}${section('Vitals',rows.filter(x=>x.category==='vitals'))}${section('Nursing Procedures',nursing)}${section('Daily Care',care)}${section('Food & Diet',food)}${section('Physiotherapy',physio)}${section('Daily Moments',moments)}`;
+}
+function initIntelligentReport(){
+  const input=document.querySelector('#intelligent-report-date');if(!input)return;
+  input.max=todayISO();input.value=intelligentReportDate;
+  input.addEventListener('change',()=>{intelligentReportDate=input.value||todayISO();renderIntelligentReport();});
+  document.querySelector('#intelligent-report-prev')?.addEventListener('click',()=>{const d=new Date(`${intelligentReportDate}T12:00:00`);d.setDate(d.getDate()-1);intelligentReportDate=activityDateISO(d);input.value=intelligentReportDate;renderIntelligentReport();});
+  document.querySelector('#intelligent-report-today')?.addEventListener('click',()=>{intelligentReportDate=todayISO();input.value=intelligentReportDate;renderIntelligentReport();});
+}
+
 function renderDashboard(data){
   if(!data)return;
   latestDashboardData=data;
@@ -240,7 +273,7 @@ function renderDashboard(data){
   const careMetricNote=careLogs.length?`${careLogs.length} care activit${careLogs.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
   const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
   const cond=document.querySelector('#condition-card');if(cond){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
-  const timeline=buildTimeline(data);const ot=document.querySelector('#overview-timeline');if(ot)ot.innerHTML=timeline.length?timeline.slice(0,6).map(x=>`<div class="done"><span>${esc(timeIN(x.at))}</span><p><b>${esc(x.title)}</b><small>${esc(x.note||'')}</small></p></div>`).join(''):'<div class="pending"><span>—</span><p><b>No care updates recorded yet</b><small>New ERP entries will appear here after refresh.</small></p></div>';
+  const timeline=buildTimeline(data);renderOverviewTimeline();renderIntelligentReport();
   const lu=document.querySelector('#latest-update');if(lu){const x=timeline[0];lu.innerHTML=x?`<span class="avatar small">SC</span><div><b>Latest ERP Update</b><small>${esc(dateTimeIN(x.at))}</small><p>${esc(x.title)}${x.note?` — ${esc(x.note)}`:''}</p></div>`:'<div><b>No updates recorded yet</b><small>Updates will appear from the Samara ERP.</small></div>';}
 
   const cb=document.querySelector('#care-body');
@@ -373,8 +406,10 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
 });
 document.querySelector('#signout-button')?.addEventListener('click',closePortal);
 document.querySelector('#mobile-menu')?.addEventListener('click',()=>sidebar.classList.toggle('open'));
-function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')renderIntelligentReport();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
 document.querySelectorAll('.side-nav button[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
+initOverviewActivityFilters();
+initIntelligentReport();
 document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.openView==='activity'){openActivityTimeline();return;}showView(b.dataset.openView);}));
 document.querySelector('#refresh-button')?.addEventListener('click',()=>loadDashboard(true));
 

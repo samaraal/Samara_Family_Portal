@@ -77,7 +77,7 @@
 <aside class="sidebar">
 <div class="sidebar-brand">
 <img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
-<small>Family Portal v1.0.13</small>
+<small>Family Portal v1.0.14</small>
 </div>
 <nav class="side-nav">
 <button class="active" data-view="overview"><span>⌂</span> Overview</button>
@@ -88,6 +88,7 @@
 <button data-view="physio"><span>⚘</span> Physiotherapy</button>
 <button data-view="billing"><span>₹</span> Billing</button>
 <button data-view="documents"><span>▤</span> Documents</button>
+<button data-view="report"><span>▦</span> Intelligent Report</button>
 <button data-view="enquiry"><span>☎</span> Admission Enquiry</button>
 <button data-view="visits"><span>◷</span> Visit Requests</button>
 <button data-view="messages"><span>✉</span> Messages</button>
@@ -137,6 +138,7 @@
 <div class="dashboard-grid">
 <section class="panel">
 <div class="panel-head"><div><span class="eyebrow">Today</span><h3>Care Timeline</h3></div><button data-open-view="activity">View all</button></div>
+<div class="overview-activity-filters" id="overview-activity-filters"></div>
 <div class="timeline-list" id="overview-timeline">
 <div class="pending"><span>—</span><p><b>Loading current care information…</b><small>Reading ERP records</small></p></div>
 </div>
@@ -222,6 +224,11 @@
 <div class="document-grid" id="documents-grid">
 <article><span>▤</span><div><b>Loading documents…</b><small>Reading ERP records</small></div></article>
 </div>
+</section>
+<section class="view" id="view-report">
+<div class="section-heading"><div><span class="eyebrow">Family View</span><h2>Intelligent Patient Report</h2></div><span class="date-chip">View only</span></div>
+<div class="intelligent-report-family-toolbar"><button type="button" id="intelligent-report-prev">← Previous Day</button><label>Date <input type="date" id="intelligent-report-date"/></label><button type="button" id="intelligent-report-today">Today</button></div>
+<div id="intelligent-report-content" class="family-intelligent-report"><p>Loading report…</p></div>
 </section>
 <section class="view" id="view-enquiry">
 <div class="section-heading"><div><span class="eyebrow">Admission Enquiry</span><h2>Send an admission enquiry to Samara</h2></div><span class="date-chip">Admin / Manager review</span></div>
@@ -313,6 +320,6 @@
 </div>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="./config.js"></script>
-<script src="./js/family-app-v1.0.6.js?v=1.0.13"></script>
+<script src="./js/family-app-v1.0.6.js?v=1.0.14"></script>
 </body>
 </html>

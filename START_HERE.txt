@@ -1,0 +1,14 @@
+Samara Family Portal v1.0.14
+
+Replace these 4 files preserving folders:
+- index.html
+- service-worker.js
+- js/family-app-v1.0.6.js
+- css/style.css
+
+Changes:
+1. Overview Care Timeline now has quick Today filters: All, Medicines, Vitals, Nursing Procedures, Care, Food & Diet, Physiotherapy, Daily Moments.
+2. New sidebar page: Intelligent Report (view only), with date selector, Previous Day and Today.
+3. Report is generated from the same family-visible live ERP data already available to the Family Portal. No edit/share controls are exposed.
+
+No SQL / Edge Function change required.
