@@ -1,5 +1,5 @@
-// Family Portal v1.0.18
-const CACHE = 'samara-family-portal-1.0.18-family-only-safe';
+// Family Portal v1.0.14
+const CACHE = 'samara-family-portal-1.0.14-activity-timeline-css-fix';
 const SHELL = [
   './', './index.html', './styles.css?v=2.8.77', './app.js?v=2.8.77',
   './bootstrap-error.js?v=2.8.40', './health-check.js?v=2.8.40',
@@ -15,7 +15,7 @@ self.addEventListener('install', event => {
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()).then(async()=>{
     const clients=await self.clients.matchAll({type:'window',includeUncontrolled:true});
-    clients.forEach(client=>client.postMessage({type:'SAMARA_UPDATE_AVAILABLE',version:'1.0.18'}));
+    clients.forEach(client=>client.postMessage({type:'SAMARA_UPDATE_AVAILABLE',version:'1.0.14'}));
   }));
 });
 self.addEventListener('fetch', event => {
