@@ -1,14 +1,16 @@
-Samara Family Portal v1.0.17 — Intelligent Report connection fix
+SAMARA FAMILY PORTAL v1.0.18 — FAMILY-PORTAL-ONLY SAFE UPDATE
 
-Replace ONLY these Family Portal files, preserving folders:
+ERP: DO NOT CHANGE.
+Supabase Edge Functions: DO NOT CHANGE.
+SQL: NONE.
+
+Replace only these Family Portal repository files, preserving folders:
 1. index.html
 2. js/family-app-v1.0.6.js
 3. service-worker.js
 
-No SQL.
-No new Edge Function.
-No change to daily-patient-report is required if the currently deployed function already contains mode: family_list_existing_reports.
-
-Fix: Family Portal now calls the existing daily-patient-report Edge Function through the Supabase JS client's functions.invoke() transport, which supplies the correct Supabase function gateway headers and avoids trying to parse an HTML gateway response as JSON.
-
-After deployment, confirm sidebar says Family Portal v1.0.17, then open Intelligent Report.
+Changes:
+- Intelligent Report now has a true Report Date input with Previous Day / Today.
+- It continues to request only the existing original ERP-generated PDF; it does not generate a new report.
+- Admin Preview data is cached only in the current browser tab (sessionStorage), so Refresh keeps the read-only Admin Preview instead of returning to the Family login page.
+- For security, Admin Preview does not impersonate a family session to access protected report PDFs. Normal authorised family login continues to use the existing report service.
