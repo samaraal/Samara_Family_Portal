@@ -308,3 +308,22 @@ td{color:#4d3b46}
 .discharge-finance b{display:block;font-size:.9rem;margin-bottom:4px}.discharge-finance b.settled{color:#167b4d}.discharge-finance b.pending{color:#b42318}
 .discharge-finance small{color:#765467;line-height:1.35}
 @media(max-width:1050px){.resident-banner.is-discharged{grid-template-columns:auto 1fr}.resident-banner.is-discharged .discharge-summary-card,.resident-banner.is-discharged .condition-card{grid-column:1/-1}.resident-banner.is-discharged .condition-card{text-align:left;padding:16px 0 0;border-left:0;border-top:1px solid rgba(255,255,255,.2)}}
+
+
+/* v1.0.17 — approved discharged resident header */
+.resident-banner.is-discharged{grid-template-columns:auto minmax(270px,1fr) minmax(360px,.95fr) minmax(280px,.72fr);gap:24px;align-items:center;padding:26px 30px;background:linear-gradient(105deg,#65072f 0%,#970b4e 48%,#c20c62 100%)}
+.resident-banner.is-discharged .resident-info .status-pill{display:none}
+.resident-banner.is-discharged .resident-info h2{font-size:2rem;margin-bottom:5px}
+.resident-banner.is-discharged .resident-info p{font-size:1rem}
+.discharge-summary-card{background:#fff6f8;color:#681238;border-radius:14px;padding:14px 20px;min-width:350px;box-shadow:none;border:1px solid rgba(255,255,255,.72)}
+.discharge-date{display:flex;gap:15px;align-items:center;padding-bottom:10px}
+.discharge-date .discharge-icon{font-size:2rem;font-weight:900;color:#9b174f;line-height:1}
+.discharge-summary-card .discharge-date div>span{font-size:.82rem;font-weight:800;color:#8a1749}
+.discharge-summary-card .discharge-date strong{font-size:1.22rem;margin:2px 0 0;color:#6b1039}
+.discharge-finance{border-top:1px solid #dda9bd;padding-top:9px;text-align:center}
+.discharge-finance b{font-size:.95rem;margin:0}.discharge-finance b.settled{color:#167b4d}.discharge-finance b.pending{color:#b42318}
+.resident-banner.is-discharged .condition-card{min-width:260px;text-align:left;padding-left:34px}
+.resident-banner.is-discharged .condition-card span{font-size:.95rem}.resident-banner.is-discharged .condition-card strong{font-size:2rem;margin:4px 0 8px}.resident-banner.is-discharged .condition-card small{font-size:.95rem;line-height:1.55;color:#fff}
+.discharge-thankyou{margin-top:18px;border-radius:16px;background:linear-gradient(135deg,#fff2f7,#fde8f0);padding:20px 18px;text-align:center;color:#8b164a;border:1px solid #f2d1df}
+.discharge-thankyou span{display:inline-block;font-size:2rem;color:#c91663;margin-right:8px;vertical-align:middle}.discharge-thankyou em{font-family:Georgia,serif;font-size:1.15rem;line-height:1.45}.discharge-thankyou small{display:block;margin-top:12px;font-size:.68rem;font-weight:900;letter-spacing:.25em;color:#b0185a}
+@media(max-width:1180px){.resident-banner.is-discharged{grid-template-columns:auto 1fr}.resident-banner.is-discharged .discharge-summary-card,.resident-banner.is-discharged .condition-card{grid-column:1/-1;min-width:0;width:100%}.resident-banner.is-discharged .condition-card{padding:16px 0 0;border-left:0;border-top:1px solid rgba(255,255,255,.2)}}

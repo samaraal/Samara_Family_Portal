@@ -274,26 +274,32 @@ async function enrichDischargeSummary(data){
 function renderDischargeBanner(data,bill){
   const p=data?.patient||{};
   const d=data?.discharge||data?.final_discharge||p?.discharge||{};
-  const inactive=p.is_active===false||String(p.admission_status||'').toLowerCase()==='discharged';
+  const inactive=p.is_active===false||String(p.admission_status||'').toLowerCase()==='discharged'||String(p.status||'').toLowerCase()==='discharged';
   const departure=d.actual_departure_at||d.discharged_at||p.actual_departure_at||p.discharged_at||null;
-  const discharged=Boolean(departure||inactive);
+  const discharged=Boolean(departure||inactive||String(d.status||'').toLowerCase()==='completed');
   const banner=document.querySelector('.resident-banner');
   const pill=banner?.querySelector('.status-pill');
-  if(!banner||!pill)return;
+  if(!banner||!pill)return false;
   banner.classList.toggle('is-discharged',discharged);
   pill.textContent=discharged?'Discharged':'Currently at Samara';
   let card=document.querySelector('#discharge-summary-card');
-  if(!discharged){card?.remove();return;}
+  let thanks=document.querySelector('#discharge-thankyou');
+  if(!discharged){card?.remove();thanks?.remove();return false;}
   if(!card){card=document.createElement('div');card.id='discharge-summary-card';card.className='discharge-summary-card';const cond=document.querySelector('#condition-card');banner.insertBefore(card,cond||null);}
   const outstanding=Number(bill?.outstanding||0);
   const finalAmount=Math.max(0,Number(bill?.charges||0)-Number(bill?.discounts||0)+Number(bill?.refunds||0));
   const paid=Number(bill?.payments||0);
   const settled=Math.abs(outstanding)<0.01;
-  card.innerHTML=`<div class="discharge-date"><span>Discharged on</span><strong>${departure?esc(dateTimeIN(departure)):(p.discharge_date?esc(dateIN(p.discharge_date)):'Discharged')}</strong></div><div class="discharge-finance"><b class="${settled?'settled':'pending'}">${settled?'✓ All bills settled':'● Payment pending'}</b><small>Final amount ${money(finalAmount)} · Paid ${money(paid)} · Outstanding ${money(outstanding)}</small></div>`;
+  const departureText=departure?dateTimeIN(departure):(p.discharge_date?dateIN(p.discharge_date):'Discharged');
+  card.innerHTML=`<div class="discharge-date"><span class="discharge-icon">↪</span><div><span>Discharged on</span><strong>${esc(departureText)}</strong></div></div><div class="discharge-finance"><b class="${settled?'settled':'pending'}">${settled?'✓ All bills settled':'● Payment pending'}</b></div>`;
   const cond=document.querySelector('#condition-card');
-  if(cond){cond.innerHTML=`<span>Final Bill Amount</span><strong>${money(finalAmount)}</strong><small>${settled?`Amount paid ${money(paid)} · Outstanding ₹0`:`Amount paid ${money(paid)} · Outstanding ${money(outstanding)}`}</small>`;}
+  if(cond){cond.innerHTML=`<span>Final Bill Amount</span><strong>${money(finalAmount)}</strong><small>Amount Paid&nbsp;&nbsp;: &nbsp;${money(paid)}<br>Outstanding&nbsp;&nbsp;: &nbsp;${money(outstanding)}</small>`;}
+  const latest=document.querySelector('#latest-update')?.closest('.panel');
+  if(latest&&!thanks){thanks=document.createElement('div');thanks.id='discharge-thankyou';thanks.className='discharge-thankyou';thanks.innerHTML='<span>♥</span><em>Thank you for trusting us with<br>your loved one’s care.</em><small>COMPASSION • COMFORT • DIGNITY</small>';latest.appendChild(thanks);}
+  const metricCards=document.querySelectorAll('#overview-metrics .metric-card');
+  if(metricCards[3]) metricCards[3].querySelector('small').textContent=settled?'All bills settled':'Payment pending';
+  return true;
 }
-
 function renderDashboard(data){
   if(!data)return;
   latestDashboardData=data;
@@ -305,14 +311,14 @@ function renderDashboard(data){
   const given=mar.filter(x=>['given','administered','completed'].includes(String(x.status||'').toLowerCase())).length;
   const completedCare=careLogs.filter(x=>String(x.status||'').toLowerCase()==='completed').length;
   const latest=vitals[0]||{}; const bill=billingSummary(billing);
-  renderDischargeBanner(data,bill);
   const bp=(latest.systolic!=null||latest.diastolic!=null)?`${latest.systolic??'—'}/${latest.diastolic??'—'}`:'—/—';
   const vitalSmall=latest.recorded_at?`${latest.blood_sugar!=null?`${latest.blood_sugar_type||'Sugar'} ${latest.blood_sugar} · `:''}Recorded ${timeIN(latest.recorded_at)}`:'No vital signs recorded';
   const activeCareOrders=careOrders.filter(x=>x.is_active!==false);
   const careMetricValue=activeCareOrders.length?`${completedCare} / ${activeCareOrders.length}`:`${completedCare}`;
   const careMetricNote=careLogs.length?`${careLogs.length} care activit${careLogs.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
   const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
-  const cond=document.querySelector('#condition-card');if(cond){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
+  const dischargedNow=renderDischargeBanner(data,bill);
+  const cond=document.querySelector('#condition-card');if(cond&&!dischargedNow){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
   const timeline=buildTimeline(data);renderOverviewTimeline();renderIntelligentReport();
   const lu=document.querySelector('#latest-update');if(lu){const x=timeline[0];lu.innerHTML=x?`<span class="avatar small">SC</span><div><b>Latest ERP Update</b><small>${esc(dateTimeIN(x.at))}</small><p>${esc(x.title)}${x.note?` — ${esc(x.note)}`:''}</p></div>`:'<div><b>No updates recorded yet</b><small>Updates will appear from the Samara ERP.</small></div>';}
 
