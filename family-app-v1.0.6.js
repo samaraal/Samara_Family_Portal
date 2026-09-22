@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.6";
+const FAMILY_PORTAL_VERSION = "1.0.15";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.
@@ -126,11 +126,18 @@ const supabaseClient = window.supabase && cfg.supabaseUrl && cfg.supabasePublish
   ? window.supabase.createClient(cfg.supabaseUrl, cfg.supabasePublishableKey) : null;
 
 const loginScreen = document.querySelector("#login-screen");
+const firstLoginScreen = document.querySelector("#first-login-screen");
 const portalScreen = document.querySelector("#portal-screen");
 const sidebar = document.querySelector(".sidebar");
 const pageTitle = document.querySelector("#page-title");
 let familySession = null;
 let refreshTimer = null;
+let adminPreviewMode = false;
+let latestDashboardData = null;
+let activityTimelineDate = todayISO();
+let activityTimelineCategory = 'all';
+let overviewTimelineCategory = 'all';
+let intelligentReportDate = todayISO();
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const money = value => `₹${Number(value || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
@@ -175,17 +182,83 @@ function billingSummary(rows){let charges=0,payments=0,discounts=0,refunds=0;for
 
 function buildTimeline(data){
   const events=[];
-  (data.care_logs||[]).forEach(x=>events.push({at:x.completed_at||x.created_at,title:`${x.care_type||'Daily care'} — ${x.status||'Recorded'}`,note:x.remarks||x.shift||''}));
-  (data.medication_administrations||[]).forEach(x=>events.push({at:x.administered_at||x.created_at,title:`Medicine: ${x.medicine_name||'Medication'} — ${x.status||'Recorded'}`,note:x.scheduled_time?`Scheduled ${x.scheduled_time}`:(x.remarks||'')}));
-  (data.vitals||[]).forEach(x=>{const bits=[];if(x.systolic!=null||x.diastolic!=null)bits.push(`BP ${x.systolic??'—'}/${x.diastolic??'—'}`);if(x.pulse!=null)bits.push(`Pulse ${x.pulse}`);if(x.spo2!=null)bits.push(`SpO₂ ${x.spo2}%`);if(x.blood_sugar!=null)bits.push(`${x.blood_sugar_type||'Sugar'} ${x.blood_sugar}`);events.push({at:x.recorded_at,title:'Vitals recorded',note:bits.join(' · ')||x.remarks||'Observation recorded'});});
-  (data.physio_sessions||[]).forEach(x=>events.push({at:x.session_at||x.created_at,title:`Physiotherapy — ${x.status||'Recorded'}`,note:x.notes||x.physiotherapist_name||''}));
-  (data.meals||[]).forEach(x=>events.push({at:x.served_at,title:`${x.meal_type||'Meal'} — ${x.consumption_status||'Recorded'}`,note:[x.menu,x.remarks].filter(Boolean).join(' · ')}));
+  const push=(category,at,title,note='',status='')=>{if(at)events.push({category,at,title,note,status});};
+  const medicationOrders=data.medication_orders||[];
+  const medicationOrderById=new Map(medicationOrders.map(order=>[String(order.id),order]));
+  (data.care_logs||[]).forEach(x=>push('care',x.completed_at||x.recorded_at||x.created_at,`${x.care_type||x.task_name||'Daily care'} — ${x.status||'Recorded'}`,x.remarks||x.shift||'',x.status||''));
+  (data.medication_administrations||[]).forEach(x=>{
+    const order=x.order_id!=null?medicationOrderById.get(String(x.order_id)):null;
+    const medicineName=String(x.medicine_name||order?.medicine_name||'').trim();
+    const strength=String(x.strength||x.dose||order?.strength||order?.dose||'').trim();
+    const medicineDetails=[medicineName,strength && !medicineName.toLowerCase().includes(strength.toLowerCase())?strength:''].filter(Boolean).join(' ');
+    const status=x.status||'Recorded';
+    const scheduled=x.scheduled_time||x.scheduled_at||'';
+    const note=[scheduled?`Scheduled ${scheduled}`:'',x.remarks||''].filter(Boolean).join(' · ');
+    push('medicines',x.administered_at||x.created_at,`Medicine: ${medicineDetails||'Medicine details unavailable'} — ${status}`,note,status);
+  });
+  (data.vitals||[]).forEach(x=>{const bits=[];if(x.systolic!=null||x.diastolic!=null)bits.push(`BP ${x.systolic??'—'}/${x.diastolic??'—'}`);if(x.pulse!=null)bits.push(`Pulse ${x.pulse}`);if(x.spo2!=null)bits.push(`SpO₂ ${x.spo2}%`);if(x.temperature!=null)bits.push(`Temp ${x.temperature}`);if(x.blood_sugar!=null)bits.push(`${x.blood_sugar_type||'Sugar'} ${x.blood_sugar}`);push('vitals',x.recorded_at,'Vitals recorded',bits.join(' · ')||x.remarks||'Observation recorded');});
+  (data.physio_sessions||[]).forEach(x=>push('physiotherapy',x.session_at||x.completed_at||x.created_at||x.session_date,`Physiotherapy: ${x.therapy_type||x.session_type||'Session'} — ${x.status||'Recorded'}`,x.notes||x.physiotherapist_name||'',x.status||''));
+  (data.meals||data.meal_records||[]).forEach(x=>push('food',x.served_at||x.recorded_at||x.created_at||(x.meal_date?`${x.meal_date}T12:00:00`:null),`Food & Diet: ${x.meal_type||x.item_type||'Meal'} — ${x.consumption_status||x.status||'Recorded'}`,[x.menu||x.item_name,x.quantity,x.remarks].filter(Boolean).join(' · '),x.consumption_status||x.status||''));
+  const nursing=[...(data.nursing_procedures||[]),...(data.nursing_procedure_logs||[]),...(data.procedure_logs||[])];
+  nursing.forEach(x=>push('nursing',x.completed_at||x.performed_at||x.recorded_at||x.created_at,`Nursing Procedure: ${x.procedure_name||x.procedure_type||x.nursing_procedure||x.name||'Procedure'} — ${x.status||'Recorded'}`,[x.details||x.notes||x.remarks,x.duration?`Duration ${x.duration}`:''].filter(Boolean).join(' · '),x.status||''));
+  (data.daily_moments||data.moments||[]).forEach(x=>push('moments',x.created_at||x.recorded_at,'Daily Moment',x.caption||'A moment shared by Samara'));
   return events.filter(x=>x.at).sort((a,b)=>new Date(b.at)-new Date(a.at));
+}
+
+const ACTIVITY_CATEGORIES=[
+  ['all','All'],['medicines','Medicines'],['vitals','Vitals'],['nursing','Nursing Procedures'],['care','Care'],['food','Food & Diet'],['physiotherapy','Physiotherapy'],['moments','Daily Moments']
+];
+function activityDateISO(value){const d=new Date(value);if(Number.isNaN(d.getTime()))return '';return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function shiftActivityDate(days){const d=new Date(`${activityTimelineDate}T12:00:00`);d.setDate(d.getDate()+days);activityTimelineDate=activityDateISO(d);renderActivityTimeline();}
+function openActivityTimeline(){activityTimelineDate=todayISO();activityTimelineCategory='all';let modal=document.querySelector('#activity-timeline-modal');if(!modal){modal=document.createElement('div');modal.id='activity-timeline-modal';modal.className='activity-modal';modal.innerHTML=`<div class="activity-modal-card"><div class="activity-modal-head"><div><span class="eyebrow">Patient Activity</span><h2>Care Timeline — View All</h2></div><button type="button" class="activity-close" aria-label="Close">×</button></div><div id="activity-timeline-controls"></div><div id="activity-timeline-results"></div></div>`;document.body.appendChild(modal);modal.querySelector('.activity-close').addEventListener('click',()=>modal.classList.remove('open'));modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open');});}modal.classList.add('open');renderActivityTimeline();}
+function renderActivityTimeline(){
+  const modal=document.querySelector('#activity-timeline-modal');if(!modal)return;
+  const controls=modal.querySelector('#activity-timeline-controls'),results=modal.querySelector('#activity-timeline-results');
+  controls.innerHTML=`<div class="activity-datebar"><button type="button" data-day="-1">← Previous Day</button><label>Date <input type="date" value="${esc(activityTimelineDate)}" max="${esc(todayISO())}"></label><button type="button" data-today="1">Today</button><button type="button" data-day="1" ${activityTimelineDate>=todayISO()?'disabled':''}>Next Day →</button></div><div class="activity-filters">${ACTIVITY_CATEGORIES.map(([key,label])=>`<button type="button" data-category="${key}" class="${activityTimelineCategory===key?'active':''}">${esc(label)}</button>`).join('')}</div>`;
+  controls.querySelectorAll('[data-day]').forEach(b=>b.addEventListener('click',()=>shiftActivityDate(Number(b.dataset.day))));
+  controls.querySelector('[data-today]').addEventListener('click',()=>{activityTimelineDate=todayISO();renderActivityTimeline();});
+  controls.querySelector('input[type="date"]').addEventListener('change',e=>{activityTimelineDate=e.target.value||todayISO();renderActivityTimeline();});
+  controls.querySelectorAll('[data-category]').forEach(b=>b.addEventListener('click',()=>{activityTimelineCategory=b.dataset.category;renderActivityTimeline();}));
+  const all=buildTimeline(latestDashboardData||{});const rows=all.filter(x=>activityDateISO(x.at)===activityTimelineDate&&(activityTimelineCategory==='all'||x.category===activityTimelineCategory));
+  const label=ACTIVITY_CATEGORIES.find(x=>x[0]===activityTimelineCategory)?.[1]||'All';
+  results.innerHTML=`<div class="activity-result-head"><strong>${esc(dateIN(activityTimelineDate))}</strong><span>${esc(label)} · ${rows.length} record${rows.length===1?'':'s'}</span></div>${rows.length?`<div class="activity-list">${rows.map(x=>`<article class="activity-row"><div class="activity-time">${esc(timeIN(x.at))}</div><div class="activity-copy"><span class="activity-badge ${esc(x.category)}">${esc(ACTIVITY_CATEGORIES.find(c=>c[0]===x.category)?.[1]||x.category)}</span><b>${esc(x.title)}</b>${x.note?`<small>${esc(x.note)}</small>`:''}</div></article>`).join('')}</div>`:`<div class="activity-empty">No ${activityTimelineCategory==='all'?'patient activity':label.toLowerCase()} records for this date.</div>`}`;
+}
+
+function renderOverviewTimeline(){
+  const host=document.querySelector('#overview-timeline');if(!host)return;
+  const today=todayISO();
+  const rows=buildTimeline(latestDashboardData||{}).filter(x=>activityDateISO(x.at)===today&&(overviewTimelineCategory==='all'||x.category===overviewTimelineCategory));
+  host.innerHTML=rows.length?rows.slice(0,6).map(x=>`<div class="done"><span>${esc(timeIN(x.at))}</span><p><b>${esc(x.title)}</b><small>${esc(x.note||'')}</small></p></div>`).join(''):'<div class="pending"><span>—</span><p><b>No records in this category today</b><small>Choose another category or View all for date-wise history.</small></p></div>';
+  document.querySelectorAll('#overview-activity-filters [data-overview-category]').forEach(b=>b.classList.toggle('active',b.dataset.overviewCategory===overviewTimelineCategory));
+}
+function initOverviewActivityFilters(){
+  const host=document.querySelector('#overview-activity-filters');if(!host)return;
+  host.innerHTML=ACTIVITY_CATEGORIES.map(([key,label])=>`<button type="button" data-overview-category="${key}" class="${overviewTimelineCategory===key?'active':''}">${esc(label)}</button>`).join('');
+  host.querySelectorAll('[data-overview-category]').forEach(b=>b.addEventListener('click',()=>{overviewTimelineCategory=b.dataset.overviewCategory;renderOverviewTimeline();}));
+}
+function intelligentReportRows(date){return buildTimeline(latestDashboardData||{}).filter(x=>activityDateISO(x.at)===date);}
+function renderIntelligentReport(){
+  const host=document.querySelector('#intelligent-report-content');if(!host)return;
+  const data=latestDashboardData||{}, rows=intelligentReportRows(intelligentReportDate), p=data.patient||{};
+  const vitals=(data.vitals||[]).filter(x=>activityDateISO(x.recorded_at)===intelligentReportDate);
+  const meds=rows.filter(x=>x.category==='medicines'), nursing=rows.filter(x=>x.category==='nursing'), care=rows.filter(x=>x.category==='care'), food=rows.filter(x=>x.category==='food'), physio=rows.filter(x=>x.category==='physiotherapy'), moments=rows.filter(x=>x.category==='moments');
+  const section=(title,items)=>`<section class="family-report-section"><h3>${esc(title)}</h3>${items.length?items.map(x=>`<article><b>${esc(timeIN(x.at))} · ${esc(x.title)}</b>${x.note?`<small>${esc(x.note)}</small>`:''}</article>`).join(''):'<p>No records for this date.</p>'}</section>`;
+  host.innerHTML=`<div class="family-report-cover"><span>Samara Assisted Living</span><h2>Intelligent Patient Report</h2><b>${esc(p.patient_name||familySession?.patient_name||'Resident')}</b><small>${esc(p.patient_code||familySession?.patient_code||'')} · ${esc(dateIN(intelligentReportDate))}</small><p>View-only family report generated from the resident's Family Portal-visible ERP records.</p></div>
+  <div class="family-report-summary"><article><span>Medicines</span><strong>${meds.length}</strong></article><article><span>Vitals</span><strong>${vitals.length}</strong></article><article><span>Nursing Procedures</span><strong>${nursing.length}</strong></article><article><span>Care</span><strong>${care.length}</strong></article><article><span>Food & Diet</span><strong>${food.length}</strong></article></div>
+  ${section('Medicines',meds)}${section('Vitals',rows.filter(x=>x.category==='vitals'))}${section('Nursing Procedures',nursing)}${section('Daily Care',care)}${section('Food & Diet',food)}${section('Physiotherapy',physio)}${section('Daily Moments',moments)}`;
+}
+function initIntelligentReport(){
+  const input=document.querySelector('#intelligent-report-date');if(!input)return;
+  input.max=todayISO();input.value=intelligentReportDate;
+  input.addEventListener('change',()=>{intelligentReportDate=input.value||todayISO();renderIntelligentReport();});
+  document.querySelector('#intelligent-report-prev')?.addEventListener('click',()=>{const d=new Date(`${intelligentReportDate}T12:00:00`);d.setDate(d.getDate()-1);intelligentReportDate=activityDateISO(d);input.value=intelligentReportDate;renderIntelligentReport();});
+  document.querySelector('#intelligent-report-today')?.addEventListener('click',()=>{intelligentReportDate=todayISO();input.value=intelligentReportDate;renderIntelligentReport();});
 }
 
 function renderDashboard(data){
   if(!data)return;
-  const p=data.patient||{}; if(familySession){familySession={...familySession,patient_name:p.patient_name||familySession.patient_name,room_no:p.room_no||familySession.room_no,bed_no:p.bed_no||familySession.bed_no,admission_date:p.admission_date||familySession.admission_date};applyFamilySession(familySession);sessionStorage.setItem('samara_family_session',JSON.stringify(familySession));}
+  latestDashboardData=data;
+  const p=data.patient||{}; if(familySession){familySession={...familySession,patient_name:p.patient_name||familySession.patient_name,room_no:p.room_no||familySession.room_no,bed_no:p.bed_no||familySession.bed_no,admission_date:p.admission_date||familySession.admission_date};applyFamilySession(familySession);saveFamilySession();}
   const orders=data.medication_orders||[], mar=data.medication_administrations||[], careOrders=data.care_orders||[], careLogs=data.care_logs||[], vitals=data.vitals||[], billing=data.billing||[];
   const today=todayISO();
   const activeOrders=orders.filter(x=>x.is_active!==false && (!x.start_date||x.start_date<=today) && (!x.end_date||x.end_date>=today));
@@ -195,12 +268,28 @@ function renderDashboard(data){
   const latest=vitals[0]||{}; const bill=billingSummary(billing);
   const bp=(latest.systolic!=null||latest.diastolic!=null)?`${latest.systolic??'—'}/${latest.diastolic??'—'}`:'—/—';
   const vitalSmall=latest.recorded_at?`${latest.blood_sugar!=null?`${latest.blood_sugar_type||'Sugar'} ${latest.blood_sugar} · `:''}Recorded ${timeIN(latest.recorded_at)}`:'No vital signs recorded';
-  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${completedCare} / ${careOrders.filter(x=>x.is_active!==false).length}</strong><small>${careOrders.length?'Today\'s recorded care':'No care plan recorded'}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
+  const activeCareOrders=careOrders.filter(x=>x.is_active!==false);
+  const careMetricValue=activeCareOrders.length?`${completedCare} / ${activeCareOrders.length}`:`${completedCare}`;
+  const careMetricNote=careLogs.length?`${careLogs.length} care activit${careLogs.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
+  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
   const cond=document.querySelector('#condition-card');if(cond){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
-  const timeline=buildTimeline(data);const ot=document.querySelector('#overview-timeline');if(ot)ot.innerHTML=timeline.length?timeline.slice(0,6).map(x=>`<div class="done"><span>${esc(timeIN(x.at))}</span><p><b>${esc(x.title)}</b><small>${esc(x.note||'')}</small></p></div>`).join(''):'<div class="pending"><span>—</span><p><b>No care updates recorded yet</b><small>New ERP entries will appear here after refresh.</small></p></div>';
+  const timeline=buildTimeline(data);renderOverviewTimeline();renderIntelligentReport();
   const lu=document.querySelector('#latest-update');if(lu){const x=timeline[0];lu.innerHTML=x?`<span class="avatar small">SC</span><div><b>Latest ERP Update</b><small>${esc(dateTimeIN(x.at))}</small><p>${esc(x.title)}${x.note?` — ${esc(x.note)}`:''}</p></div>`:'<div><b>No updates recorded yet</b><small>Updates will appear from the Samara ERP.</small></div>';}
 
-  const cb=document.querySelector('#care-body');if(cb)cb.innerHTML=careOrders.length?careOrders.map(o=>{const log=careLogs.find(l=>l.care_order_id===o.id);return `<tr><td>${esc(o.care_type||'Care')}</td><td>${esc(o.shift||'—')}</td><td><span class="status ${log&&String(log.status).toLowerCase()==='completed'?'done':'pending'}">${esc(log?.status||'Pending')}</span></td><td>${esc(log?.completed_at?timeIN(log.completed_at):'—')}</td><td>${esc(log?.remarks||o.instruction||'—')}</td></tr>`;}).join(''):emptyRow(5,'No care plan has been recorded for this resident.');
+  const cb=document.querySelector('#care-body');
+  if(cb){
+    const careRows=[];
+    const sortedLogs=[...careLogs].sort((a,b)=>new Date(b.completed_at||b.created_at||0)-new Date(a.completed_at||a.created_at||0));
+    sortedLogs.forEach(log=>{
+      const order=careOrders.find(o=>o.id===log.care_order_id);
+      const status=log.status||'Recorded';
+      careRows.push(`<tr><td>${esc(log.care_type||order?.care_type||'Daily care')}</td><td>${esc(log.shift||order?.shift||'—')}</td><td><span class="status ${String(status).toLowerCase()==='completed'?'done':'pending'}">${esc(status)}</span></td><td>${esc(log.completed_at?timeIN(log.completed_at):(log.created_at?timeIN(log.created_at):'—'))}</td><td>${esc(log.remarks||order?.instruction||'—')}</td></tr>`);
+    });
+    activeCareOrders.filter(order=>!careLogs.some(log=>log.care_order_id===order.id)).forEach(order=>{
+      careRows.push(`<tr><td>${esc(order.care_type||'Care')}</td><td>${esc(order.shift||'—')}</td><td><span class="status pending">Pending</span></td><td>—</td><td>${esc(order.instruction||'—')}</td></tr>`);
+    });
+    cb.innerHTML=careRows.length?careRows.join(''):emptyRow(5,'No daily care plan or activity has been recorded for this resident.');
+  }
   const mb=document.querySelector('#medicines-body');if(mb)mb.innerHTML=activeOrders.length?activeOrders.map(o=>`<tr><td>${esc(o.medicine_name||'—')}</td><td>${esc(o.strength||'—')}</td><td>${esc(o.frequency||'—')}</td><td>${esc((o.scheduled_times||[]).join(', ')||'—')}</td><td>${esc(o.food_instruction||'—')}</td><td><span class="status">${esc(medStatusFor(o,mar))}</span></td></tr>`).join(''):emptyRow(6,'No active medicine orders.');
 
   const vg=document.querySelector('#vital-grid');if(vg)vg.innerHTML=`<article><span>Blood Pressure</span><strong>${esc(bp)}</strong><small>${latest.alert_level||'—'}</small></article><article><span>Pulse</span><strong>${latest.pulse!=null?`${latest.pulse} bpm`:'—'}</strong><small>${latest.recorded_at?timeIN(latest.recorded_at):'Not recorded'}</small></article><article><span>SpO₂</span><strong>${latest.spo2!=null?`${latest.spo2}%`:'—'}</strong><small>${latest.recorded_at?dateIN(latest.recorded_at):'Not recorded'}</small></article><article><span>${esc(latest.blood_sugar_type||'Blood Sugar')}</span><strong>${latest.blood_sugar!=null?esc(latest.blood_sugar):'—'}</strong><small>${latest.remarks?esc(latest.remarks):'Latest ERP value'}</small></article>`;
@@ -216,6 +305,47 @@ function renderDashboard(data){
   const docs=data.documents||[]; const dg=document.querySelector('#documents-grid');if(dg)dg.innerHTML=docs.length?docs.map(x=>`<article><span>▤</span><div><b>${esc(x.document_type||'Document')}</b><small>${esc(x.document_name||'File')} · ${esc(dateIN(x.created_at))}</small></div></article>`).join(''):'<article><span>▤</span><div><b>No documents available</b><small>No family-visible document metadata recorded.</small></div></article>';
 }
 
+
+
+function familyLedgerPdf(){
+  const data=latestDashboardData||{}, p=data.patient||{}, billing=[...(data.billing||[])];
+  if(!billing.length){alert('No patient ledger transactions are available to download.');return;}
+  const bill=billingSummary(billing);
+  const sorted=billing.slice().sort((a,b)=>new Date(a.transaction_date||a.created_at||0)-new Date(b.transaction_date||b.created_at||0));
+  let running=0;
+  const rows=sorted.map((x,i)=>{
+    const type=String(x.transaction_type||'').toLowerCase();
+    const amount=Number(x.amount||0);
+    const isDebit=type==='charge'||type==='refund';
+    const isCredit=type==='payment'||type==='discount'||type==='advance';
+    if(isDebit)running+=amount; else if(isCredit)running-=amount;
+    const particulars=[x.category,x.description].filter(Boolean).join(' · ')||x.transaction_type||'Transaction';
+    const ref=x.reference_no||x.reference||x.payment_reference||x.bill_number||'—';
+    return `<tr><td>${i+1}</td><td>${esc(dateIN(x.transaction_date||x.created_at))}</td><td>${esc(particulars)}</td><td>${esc(ref)}</td><td class="num">${isDebit?money(amount):'—'}</td><td class="num">${isCredit?money(amount):'—'}</td><td class="num">${money(running)}</td></tr>`;
+  }).join('');
+  const patientName=p.patient_name||familySession?.patient_name||'Resident';
+  const residentId=p.patient_code||p.patient_id||familySession?.patient_code||'—';
+  const room=[p.room_no||familySession?.room_no,p.bed_no||familySession?.bed_no].filter(Boolean).join(' / ')||'—';
+  const admission=p.admission_date||familySession?.admission_date;
+  const generated=new Date().toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+  const logo=new URL('./assets/samara-logo.png',window.location.href).href;
+  const safeFile=String(patientName).replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(safeFile)} Patient Ledger</title><style>
+    @page{size:A4;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#392531;margin:0;font-size:10px}.head{display:flex;align-items:center;border-bottom:3px solid #b70b61;padding-bottom:10px;margin-bottom:12px}.logo{width:120px;height:auto}.headtext{flex:1;text-align:center}.headtext h1{font-size:18px;color:#b70b61;margin:0 0 3px}.headtext h2{font-size:16px;margin:0}.headtext p{margin:3px 0 0;color:#6f5b65}.meta{border:1px solid #edc8da;border-radius:8px;padding:9px 11px;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:12px}.meta b{display:inline-block;min-width:92px}.section{font-size:12px;color:#9d0c53;font-weight:700;margin:12px 0 6px}table{width:100%;border-collapse:collapse;table-layout:fixed}th{background:#f8e3ed;color:#6c1642;border:1px solid #dca9c2;padding:6px 5px;text-align:left}td{border:1px solid #ead5df;padding:6px 5px;vertical-align:top;word-wrap:break-word}.num{text-align:right;white-space:nowrap}.summary{width:48%;margin:12px 0 0 auto}.summary td:first-child{font-weight:700}.summary tr:last-child td{font-size:12px;font-weight:800;color:#9d0c53;border-top:2px solid #b70b61}.note{margin-top:14px;border:1px solid #edc8da;border-radius:7px;padding:8px}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:28px;margin-top:34px;text-align:center}.sign div{border-top:1px solid #5d4a53;padding-top:7px}.foot{margin-top:22px;border-top:1px solid #edc8da;padding-top:8px;text-align:center;color:#6f5b65;font-size:9px}@media print{.no-print{display:none}}
+  </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Assisted Living Management System</p><h2>PATIENT ACCOUNT LEDGER</h2><p>Generated on: ${esc(generated)}</p></div></div>
+  <div class="meta"><div><b>Patient Name</b> ${esc(patientName)}</div><div><b>Resident ID</b> ${esc(residentId)}</div><div><b>Room / Bed</b> ${esc(room)}</div><div><b>Admission Date</b> ${esc(dateIN(admission))}</div></div>
+  <div class="section">Patient Ledger</div><table><thead><tr><th style="width:5%">Sl.</th><th style="width:11%">Date</th><th style="width:35%">Particulars</th><th style="width:12%">Reference</th><th style="width:12%">Debit</th><th style="width:12%">Credit</th><th style="width:13%">Balance</th></tr></thead><tbody>${rows}</tbody></table>
+  <table class="summary"><tr><td>Total Charges</td><td class="num">${money(bill.charges)}</td></tr><tr><td>Payments Received</td><td class="num">${money(bill.payments)}</td></tr><tr><td>Discounts</td><td class="num">${money(bill.discounts)}</td></tr><tr><td>Refunds</td><td class="num">${money(bill.refunds)}</td></tr><tr><td>OUTSTANDING BALANCE</td><td class="num">${money(bill.outstanding)}</td></tr></table>
+  <div class="note"><b>Important:</b> This ledger reflects financial transactions recorded in the Samara Care ERP as at ${esc(generated)}.</div><div class="sign"><div>Prepared By</div><div>Accounts / Administrator</div><div>Patient / Attendant</div></div><div class="foot">Samara Health Care LLP · Computer-generated patient ledger · No manual alteration permitted</div><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`;
+  const w=window.open('','_blank');
+  if(!w){alert('Please allow pop-ups to download the Patient Ledger PDF.');return;}
+  w.document.open();w.document.write(html);w.document.close();
+}
+
+function initFamilyLedgerPdf(){
+  document.querySelector('#family-ledger-pdf')?.addEventListener('click',familyLedgerPdf);
+}
+
 async function loadDashboard(showStatus=false){
   if(!familySession?.session_token||!supabaseClient)return false;
   const btn=document.querySelector('#refresh-button');const old=btn?.textContent;if(btn&&showStatus)btn.textContent='Refreshing…';
@@ -225,8 +355,83 @@ async function loadDashboard(showStatus=false){
     renderDashboard(data); loadDailyMoments(); if(btn&&showStatus)btn.textContent='✓ Updated'; setTimeout(()=>{if(btn)btn.textContent=old||'↻ Refresh';},1200); return true;
   }catch(err){console.error('Family dashboard load failed',err);if(btn)btn.textContent=old||'↻ Refresh';return false;}
 }
-function openPortal(session){familySession=session||familySession;if(familySession){sessionStorage.setItem('samara_family_session',JSON.stringify(familySession));applyFamilySession(familySession);}loginScreen.classList.add('hidden');portalScreen.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=setInterval(()=>loadDashboard(false),30000);}
-function closePortal(){portalScreen.classList.add('hidden');loginScreen.classList.remove('hidden');sessionStorage.removeItem('samara_family_session');familySession=null;clearInterval(refreshTimer);refreshTimer=null;}
+function saveFamilySession(){
+  if(!familySession)return;
+  const safe={...familySession};
+  delete safe.login_pin;
+  sessionStorage.setItem('samara_family_session',JSON.stringify(safe));
+}
+function openPortal(session){familySession=session||familySession;if(familySession){if(!adminPreviewMode)saveFamilySession();applyFamilySession(familySession);}loginScreen.classList.add('hidden');firstLoginScreen?.classList.add('hidden');portalScreen.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=adminPreviewMode?null:setInterval(()=>loadDashboard(false),30000);}
+function showFirstLoginChange(){
+  if(!familySession)return;
+  loginScreen.classList.add('hidden');portalScreen.classList.add('hidden');firstLoginScreen?.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=null;
+  const welcome=document.querySelector('#first-login-welcome');if(welcome)welcome.textContent=`Welcome ${familySession.relative_name||'Family Member'}. Please replace the temporary PIN with your own private 6-digit PIN.`;
+  document.querySelector('#first-login-form')?.querySelector('input[name="new_pin"]')?.focus();
+}
+function closePortal(){portalScreen.classList.add('hidden');firstLoginScreen?.classList.add('hidden');loginScreen.classList.remove('hidden');sessionStorage.removeItem('samara_family_session');familySession=null;clearInterval(refreshTimer);refreshTimer=null;}
+async function firstLoginRequired(){
+  if(!familySession?.session_token||!familySession?.access_id||!supabaseClient)return false;
+  try{
+    const {data,error}=await supabaseClient.rpc('family_portal_first_login_status',{p_session_token:familySession.session_token,p_access_id:familySession.access_id});
+    if(error){console.warn('First-login status check unavailable',error);return false;}
+    const row=Array.isArray(data)?data[0]:data;
+    return Boolean(row?.must_change_pin);
+  }catch(error){console.warn('First-login status check failed',error);return false;}
+}
+
+
+function renderAdminPreviewMoments(rows){
+  const grid=document.querySelector('#daily-moments-grid');
+  const status=document.querySelector('#daily-moments-status');
+  if(!grid)return;
+  const moments=Array.isArray(rows)?rows:[];
+  if(status)status.textContent='Admin preview uses the same family-visible Daily Moments already loaded in ERP.';
+  grid.innerHTML=moments.length?moments.map((row,index)=>`<article class="moment-card"><div class="moment-video-wrap"><video controls playsinline preload="metadata" src="${esc(row.signed_url||'')}" aria-label="Daily Moment ${index+1}"></video></div><div class="moment-copy"><div class="moment-meta"><span>${esc(momentDateLabel(row.created_at))}</span><span>${esc(momentDaysLeft(row.expires_at))}</span></div><h3>${esc(row.caption||'A moment from Samara')}</h3><small>Shared with care by Samara Assisted Living</small></div></article>`).join(''):'<article class="moment-empty"><div class="moment-empty-icon">♥</div><b>No Daily Moments have been shared during the last 7 days.</b></article>';
+}
+function enableAdminFamilyPreview(previewId){
+  adminPreviewMode=true;
+  document.body.classList.add('admin-preview-mode');
+  const banner=document.createElement('div');banner.id='admin-family-preview-banner';banner.textContent='ADMIN PREVIEW — VIEWING EXACT FAMILY PORTAL · READ ONLY';document.body.prepend(banner);
+  const style=document.createElement('style');style.textContent=`#admin-family-preview-banner{position:sticky;top:0;z-index:2147483000;background:#b01264;color:#fff;padding:10px 14px;text-align:center;font:800 13px/1.25 Arial,sans-serif;letter-spacing:.02em}.admin-preview-mode form button[type=submit],.admin-preview-mode form input,.admin-preview-mode form textarea,.admin-preview-mode form select{pointer-events:none!important;opacity:.68}.admin-preview-mode #refresh-button{display:none!important}`;document.head.appendChild(style);
+  document.querySelectorAll('form button[type="submit"],form input,form textarea,form select').forEach(el=>{el.disabled=true;});
+  const allowedOrigins=['https://app.samaraassistedliving.com','https://samaraassistedliving.com'];
+  const receive=event=>{
+    if(!allowedOrigins.includes(event.origin))return;
+    const d=event.data||{};if(d.type!=='SAMARA_FAMILY_ADMIN_PREVIEW_DATA'||d.preview_id!==previewId)return;
+    window.removeEventListener('message',receive);
+    const session={...(d.session||{}),session_token:'ADMIN-PREVIEW-NO-FAMILY-SESSION'};
+    openPortal(session);renderDashboard(d.dashboard||{});renderAdminPreviewMoments(d.dashboard?.daily_moments||[]);
+    const note=document.querySelector('#resident-contact');if(note)note.textContent=`Admin preview · Viewing as ${session.relative_name||'authorised family member'} · No family login or Last Login update`;
+  };
+  window.addEventListener('message',receive);
+  if(window.opener){for(const origin of allowedOrigins){try{window.opener.postMessage({type:'SAMARA_FAMILY_ADMIN_PREVIEW_REQUEST',preview_id:previewId},origin)}catch(_){}}}
+  window.setTimeout(()=>{if(loginScreen&&!loginScreen.classList.contains('hidden')){const st=document.querySelector('#login-status');if(st)st.textContent='Unable to load Admin Preview. Please close this tab and open Preview Family Portal again from ERP.';}},5000);
+}
+const adminPreviewId=new URLSearchParams(window.location.search).get('admin_preview');
+if(adminPreviewId)enableAdminFamilyPreview(adminPreviewId);
+
+document.querySelectorAll('[data-password-toggle]').forEach(button=>button.addEventListener('click',()=>{
+  const field=button.closest('.password-field')?.querySelector('input');if(!field)return;
+  const showing=field.type==='text';field.type=showing?'password':'text';button.classList.toggle('is-visible',!showing);button.textContent=showing?'◉':'◉';button.setAttribute('aria-label',showing?'Show Access PIN':'Hide Access PIN');
+}));
+
+document.querySelector('#first-login-signout')?.addEventListener('click',closePortal);
+document.querySelector('#first-login-form')?.addEventListener('submit',async event=>{
+  event.preventDefault();const form=event.currentTarget,status=document.querySelector('#first-login-status'),button=form.querySelector('button[type="submit"]');
+  const fd=new FormData(form),newPin=String(fd.get('new_pin')||'').trim(),confirmPin=String(fd.get('confirm_pin')||'').trim();
+  if(!/^\d{6}$/.test(newPin)){status.textContent='Please choose a new 6-digit Access PIN.';return;}
+  if(newPin!==confirmPin){status.textContent='The two PINs do not match.';return;}
+  if(familySession?.login_pin&&newPin===familySession.login_pin){status.textContent='Please choose a different PIN from the temporary PIN.';return;}
+  if(!familySession?.session_token||!familySession?.access_id){status.textContent='Your secure session has expired. Please sign in again.';return;}
+  button.disabled=true;status.textContent='Saving your new private PIN…';
+  try{
+    const {data,error}=await supabaseClient.rpc('family_portal_change_own_pin',{p_session_token:familySession.session_token,p_access_id:familySession.access_id,p_new_pin:newPin});
+    if(error)throw error;
+    const row=Array.isArray(data)?data[0]:data;if(row===false||row?.success===false)throw new Error(row?.message||'Unable to change PIN.');
+    form.reset();sessionStorage.removeItem('samara_family_session');familySession=null;firstLoginScreen?.classList.add('hidden');loginScreen.classList.remove('hidden');
+    const loginStatus=document.querySelector('#login-status');if(loginStatus)loginStatus.textContent='✓ New Access PIN saved successfully. Please sign in with your new PIN.';
+  }catch(error){console.error(error);status.textContent=error.message||'Unable to save the new PIN. Please try again.';}finally{button.disabled=false;}
+});
 
 document.querySelector('#login-form')?.addEventListener('submit',async event=>{
   event.preventDefault();const form=new FormData(event.currentTarget);const status=document.querySelector('#login-status');const submit=event.currentTarget.querySelector('button[type="submit"]');
@@ -234,16 +439,19 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
   if(!patientId){status.textContent='Please enter the Patient ID.';return;}if(!/^\d{6}$/.test(pin)){status.textContent='Please enter the 6-digit Access PIN.';return;}if(!supabaseClient){status.textContent='Family Portal connection is unavailable. Please contact Samara.';return;}
   submit.disabled=true;status.textContent='Checking secure family access…';
   try{const {data,error}=await supabaseClient.rpc('family_portal_login_by_patient',{p_patient_id:patientId,p_pin:pin});if(error)throw error;const row=Array.isArray(data)?data[0]:data;if(!row){status.textContent='Patient ID or Access PIN is incorrect, or Family Portal access is disabled.';return;}
-    familySession={access_id:row.access_id,patient_uuid:row.patient_uuid,patient_code:row.patient_code,patient_name:row.patient_name,room_no:row.room_no,bed_no:row.bed_no,admission_date:row.admission_date,relative_name:row.relative_name,relationship:row.relationship,session_token:row.session_token};
+    familySession={access_id:row.access_id,patient_uuid:row.patient_uuid,patient_code:row.patient_code,patient_name:row.patient_name,room_no:row.room_no,bed_no:row.bed_no,admission_date:row.admission_date,relative_name:row.relative_name,relationship:row.relationship,session_token:row.session_token,login_pin:pin};
+    if(await firstLoginRequired()){status.textContent='';showFirstLoginChange();return;}
     const {data:dashboard,error:dashError}=await supabaseClient.rpc('family_portal_dashboard',{p_session_token:familySession.session_token});if(dashError)throw dashError;if(!dashboard)throw new Error('Unable to read the resident record.');
     openPortal(familySession);renderDashboard(dashboard);status.textContent='';
   }catch(err){console.error(err);status.textContent='Unable to load the resident information. Please contact Samara if the problem continues.';}finally{submit.disabled=false;}
 });
 document.querySelector('#signout-button')?.addEventListener('click',closePortal);
 document.querySelector('#mobile-menu')?.addEventListener('click',()=>sidebar.classList.toggle('open'));
-function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')renderIntelligentReport();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
 document.querySelectorAll('.side-nav button[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
-document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.openView)));
+initOverviewActivityFilters();
+initIntelligentReport();
+document.querySelectorAll('[data-open-view]').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.openView==='activity'){openActivityTimeline();return;}showView(b.dataset.openView);}));
 document.querySelector('#refresh-button')?.addEventListener('click',()=>loadDashboard(true));
 
 // Admission enquiries are created only from the public Website or secure Family Portal.
@@ -279,7 +487,7 @@ async function loadFamilyMessages(){
  const host=document.querySelector('#family-message-thread');if(!host||!familySession?.session_token)return;host.innerHTML='<p>Loading secure messages…</p>';try{const {data,error}=await supabaseClient.rpc('family_list_messages',{p_session_token:familySession.session_token});if(error)throw error;const rows=Array.isArray(data)?data:[];host.innerHTML=rows.length?rows.map(r=>`<div class="message ${r.direction==='FAMILY_TO_ERP'?'sent':'received'}"><b>${esc(r.direction==='FAMILY_TO_ERP'?'You':(r.sender_name||'Samara Team'))}</b><small>${esc(dateTimeIN(r.created_at))}</small><p>${esc(r.message||'')}</p></div>`).join(''):'<p>No messages yet. You can send a secure message below.</p>';host.scrollTop=host.scrollHeight;}catch(e){host.innerHTML=`<p>${esc(e.message||'Unable to load messages.')}</p>`;}
 }
 document.querySelector('#message-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,s=form.querySelector('.form-status'),b=form.querySelector('button'),text=form.querySelector('textarea');try{b.disabled=true;s.textContent='Sending securely…';const {error}=await supabaseClient.rpc('family_send_message',{p_session_token:familySession.session_token,p_message:text.value});if(error)throw error;text.value='';s.textContent='✓ Message sent securely to Samara.';await loadFamilyMessages();}catch(e){s.textContent=e.message||'Unable to send message.';}finally{b.disabled=false;}});
-try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;openPortal(saved);loadDashboard(false).then(ok=>{if(!ok)closePortal();});}}catch(_){sessionStorage.removeItem('samara_family_session');}
+try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;(async()=>{if(await firstLoginRequired()){showFirstLoginChange();return;}openPortal(saved);const ok=await loadDashboard(false);if(!ok)closePortal();})();}}catch(_){sessionStorage.removeItem('samara_family_session');}
 initSamaraInaugurationInvitation();
 console.info(`Samara Family Portal ${FAMILY_PORTAL_VERSION}`);
 
@@ -401,3 +609,5 @@ async function loadDailyMoments(){
     if(status)status.textContent=error.message||'Unable to load Daily Moments.';
   }
 }
+
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initFamilyLedgerPdf);else initFamilyLedgerPdf();
