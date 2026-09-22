@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.15";
+const FAMILY_PORTAL_VERSION = "1.0.16";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.
@@ -255,6 +255,45 @@ function initIntelligentReport(){
   document.querySelector('#intelligent-report-today')?.addEventListener('click',()=>{intelligentReportDate=todayISO();input.value=intelligentReportDate;renderIntelligentReport();});
 }
 
+async function enrichDischargeSummary(data){
+  if(!data||!supabaseClient)return data;
+  const p=data.patient||{};
+  // Newer dashboard RPCs may already expose the final departure details.
+  const existing=data.discharge||data.final_discharge||p.discharge||null;
+  if(existing?.actual_departure_at||existing?.discharged_at)return {...data,discharge:existing};
+  const candidates=[p.id,p.patient_uuid,familySession?.patient_uuid,familySession?.patient_record_id].filter(Boolean);
+  const uuid=candidates.find(v=>/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(v)));
+  if(!uuid)return data;
+  try{
+    const {data:rows,error}=await supabaseClient.from('patient_discharges').select('id,patient_id,status,management_status,accounts_status,actual_departure_at,updated_at,created_at').eq('patient_id',uuid).order('updated_at',{ascending:false}).limit(1);
+    if(error){console.info('Family discharge summary is not directly readable; using dashboard data.',error.message);return data;}
+    return rows?.[0]?{...data,discharge:rows[0]}:data;
+  }catch(err){console.info('Family discharge summary lookup skipped.',err);return data;}
+}
+
+function renderDischargeBanner(data,bill){
+  const p=data?.patient||{};
+  const d=data?.discharge||data?.final_discharge||p?.discharge||{};
+  const inactive=p.is_active===false||String(p.admission_status||'').toLowerCase()==='discharged';
+  const departure=d.actual_departure_at||d.discharged_at||p.actual_departure_at||p.discharged_at||null;
+  const discharged=Boolean(departure||inactive);
+  const banner=document.querySelector('.resident-banner');
+  const pill=banner?.querySelector('.status-pill');
+  if(!banner||!pill)return;
+  banner.classList.toggle('is-discharged',discharged);
+  pill.textContent=discharged?'Discharged':'Currently at Samara';
+  let card=document.querySelector('#discharge-summary-card');
+  if(!discharged){card?.remove();return;}
+  if(!card){card=document.createElement('div');card.id='discharge-summary-card';card.className='discharge-summary-card';const cond=document.querySelector('#condition-card');banner.insertBefore(card,cond||null);}
+  const outstanding=Number(bill?.outstanding||0);
+  const finalAmount=Math.max(0,Number(bill?.charges||0)-Number(bill?.discounts||0)+Number(bill?.refunds||0));
+  const paid=Number(bill?.payments||0);
+  const settled=Math.abs(outstanding)<0.01;
+  card.innerHTML=`<div class="discharge-date"><span>Discharged on</span><strong>${departure?esc(dateTimeIN(departure)):(p.discharge_date?esc(dateIN(p.discharge_date)):'Discharged')}</strong></div><div class="discharge-finance"><b class="${settled?'settled':'pending'}">${settled?'✓ All bills settled':'● Payment pending'}</b><small>Final amount ${money(finalAmount)} · Paid ${money(paid)} · Outstanding ${money(outstanding)}</small></div>`;
+  const cond=document.querySelector('#condition-card');
+  if(cond){cond.innerHTML=`<span>Final Bill Amount</span><strong>${money(finalAmount)}</strong><small>${settled?`Amount paid ${money(paid)} · Outstanding ₹0`:`Amount paid ${money(paid)} · Outstanding ${money(outstanding)}`}</small>`;}
+}
+
 function renderDashboard(data){
   if(!data)return;
   latestDashboardData=data;
@@ -266,6 +305,7 @@ function renderDashboard(data){
   const given=mar.filter(x=>['given','administered','completed'].includes(String(x.status||'').toLowerCase())).length;
   const completedCare=careLogs.filter(x=>String(x.status||'').toLowerCase()==='completed').length;
   const latest=vitals[0]||{}; const bill=billingSummary(billing);
+  renderDischargeBanner(data,bill);
   const bp=(latest.systolic!=null||latest.diastolic!=null)?`${latest.systolic??'—'}/${latest.diastolic??'—'}`:'—/—';
   const vitalSmall=latest.recorded_at?`${latest.blood_sugar!=null?`${latest.blood_sugar_type||'Sugar'} ${latest.blood_sugar} · `:''}Recorded ${timeIN(latest.recorded_at)}`:'No vital signs recorded';
   const activeCareOrders=careOrders.filter(x=>x.is_active!==false);
@@ -352,7 +392,8 @@ async function loadDashboard(showStatus=false){
   try{
     const {data,error}=await supabaseClient.rpc('family_portal_dashboard',{p_session_token:familySession.session_token});
     if(error)throw error; if(!data)throw new Error('Family Portal session expired or access disabled.');
-    renderDashboard(data); loadDailyMoments(); if(btn&&showStatus)btn.textContent='✓ Updated'; setTimeout(()=>{if(btn)btn.textContent=old||'↻ Refresh';},1200); return true;
+    const enriched=await enrichDischargeSummary(data);
+    renderDashboard(enriched); loadDailyMoments(); if(btn&&showStatus)btn.textContent='✓ Updated'; setTimeout(()=>{if(btn)btn.textContent=old||'↻ Refresh';},1200); return true;
   }catch(err){console.error('Family dashboard load failed',err);if(btn)btn.textContent=old||'↻ Refresh';return false;}
 }
 function saveFamilySession(){
