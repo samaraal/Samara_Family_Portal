@@ -177,8 +177,19 @@ function billingSummary(rows){let charges=0,payments=0,discounts=0,refunds=0;for
 
 function buildTimeline(data){
   const events=[];
+  const medicationOrders=data.medication_orders||[];
+  const medicationOrderById=new Map(medicationOrders.map(order=>[String(order.id),order]));
   (data.care_logs||[]).forEach(x=>events.push({at:x.completed_at||x.created_at,title:`${x.care_type||'Daily care'} — ${x.status||'Recorded'}`,note:x.remarks||x.shift||''}));
-  (data.medication_administrations||[]).forEach(x=>events.push({at:x.administered_at||x.created_at,title:`Medicine: ${x.medicine_name||'Medication'} — ${x.status||'Recorded'}`,note:x.scheduled_time?`Scheduled ${x.scheduled_time}`:(x.remarks||'')}));
+  (data.medication_administrations||[]).forEach(x=>{
+    const order=x.order_id!=null?medicationOrderById.get(String(x.order_id)):null;
+    const medicineName=String(x.medicine_name||order?.medicine_name||'').trim();
+    const strength=String(x.strength||x.dose||order?.strength||order?.dose||'').trim();
+    const medicineDetails=[medicineName,strength && !medicineName.toLowerCase().includes(strength.toLowerCase())?strength:''].filter(Boolean).join(' ');
+    const status=x.status||'Recorded';
+    const scheduled=x.scheduled_time||x.scheduled_at||'';
+    const note=[scheduled?`Scheduled ${scheduled}`:'',x.remarks||''].filter(Boolean).join(' · ');
+    events.push({at:x.administered_at||x.created_at,title:`Medicine: ${medicineDetails||'Medicine details unavailable'} — ${status}`,note});
+  });
   (data.vitals||[]).forEach(x=>{const bits=[];if(x.systolic!=null||x.diastolic!=null)bits.push(`BP ${x.systolic??'—'}/${x.diastolic??'—'}`);if(x.pulse!=null)bits.push(`Pulse ${x.pulse}`);if(x.spo2!=null)bits.push(`SpO₂ ${x.spo2}%`);if(x.blood_sugar!=null)bits.push(`${x.blood_sugar_type||'Sugar'} ${x.blood_sugar}`);events.push({at:x.recorded_at,title:'Vitals recorded',note:bits.join(' · ')||x.remarks||'Observation recorded'});});
   (data.physio_sessions||[]).forEach(x=>events.push({at:x.session_at||x.created_at,title:`Physiotherapy — ${x.status||'Recorded'}`,note:x.notes||x.physiotherapist_name||''}));
   (data.meals||[]).forEach(x=>events.push({at:x.served_at,title:`${x.meal_type||'Meal'} — ${x.consumption_status||'Recorded'}`,note:[x.menu,x.remarks].filter(Boolean).join(' · ')}));
