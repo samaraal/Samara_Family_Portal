@@ -252,9 +252,10 @@ async function loadExistingIntelligentReports(){
   const host=document.querySelector('#intelligent-report-content');if(!host||!familySession?.session_token)return;
   host.innerHTML='<p>Loading original ERP Intelligent Patient Reports…</p>';
   try{
-    const cfg=window.SAMARA_CONFIG||{};
-    const response=await fetch(`${cfg.supabaseUrl}/functions/v1/daily-patient-report`,{method:'POST',headers:{'Content-Type':'application/json','apikey':cfg.supabaseAnonKey||cfg.supabasePublishableKey||''},body:JSON.stringify({mode:'family_list_existing_reports',session_token:familySession.session_token})});
-    const result=await response.json();if(!response.ok||!result?.ok)throw new Error(result?.error||'Unable to load Intelligent Patient Reports.');
+    if(!supabaseClient?.functions)throw new Error('Family Portal connection is not available.');
+    const {data:result,error:invokeError}=await supabaseClient.functions.invoke('daily-patient-report',{body:{mode:'family_list_existing_reports',session_token:familySession.session_token}});
+    if(invokeError)throw new Error(invokeError.message||'Unable to reach the Intelligent Patient Report service.');
+    if(!result?.ok)throw new Error(result?.error||'Unable to load Intelligent Patient Reports.');
     intelligentReportFiles=Array.isArray(result.reports)?result.reports:[];intelligentReportIndex=0;renderExistingIntelligentReport();
   }catch(e){host.innerHTML=`<div class="activity-empty"><b>Could not load Intelligent Patient Reports.</b><br><small>${esc(e.message||'Please try again.')}</small></div>`;}
 }

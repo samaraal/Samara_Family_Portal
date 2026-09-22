@@ -1,13 +1,14 @@
-Samara Family Portal v1.0.13
+Samara Family Portal v1.0.17 — Intelligent Report connection fix
 
-ROOT CAUSE FIXED:
-The date-wise activity modal code was present in js/family-app-v1.0.6.js, but its CSS had been added to styles.css. The deployed index.html actually loads css/style.css, so the new View All interface was not rendered as a modal.
+Replace ONLY these Family Portal files, preserving folders:
+1. index.html
+2. js/family-app-v1.0.6.js
+3. service-worker.js
 
-Replace exactly preserving paths:
-/index.html
-/service-worker.js
-/css/style.css
-/js/family-app-v1.0.6.js
+No SQL.
+No new Edge Function.
+No change to daily-patient-report is required if the currently deployed function already contains mode: family_list_existing_reports.
 
-After deployment the sidebar must show Family Portal v1.0.13.
-Click Care Timeline > View all to see date controls and category buttons.
+Fix: Family Portal now calls the existing daily-patient-report Edge Function through the Supabase JS client's functions.invoke() transport, which supplies the correct Supabase function gateway headers and avoids trying to parse an HTML gateway response as JSON.
+
+After deployment, confirm sidebar says Family Portal v1.0.17, then open Intelligent Report.
