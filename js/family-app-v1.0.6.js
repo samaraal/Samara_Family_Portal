@@ -236,23 +236,33 @@ function initOverviewActivityFilters(){
   host.innerHTML=ACTIVITY_CATEGORIES.map(([key,label])=>`<button type="button" data-overview-category="${key}" class="${overviewTimelineCategory===key?'active':''}">${esc(label)}</button>`).join('');
   host.querySelectorAll('[data-overview-category]').forEach(b=>b.addEventListener('click',()=>{overviewTimelineCategory=b.dataset.overviewCategory;renderOverviewTimeline();}));
 }
-function intelligentReportRows(date){return buildTimeline(latestDashboardData||{}).filter(x=>activityDateISO(x.at)===date);}
-function renderIntelligentReport(){
-  const host=document.querySelector('#intelligent-report-content');if(!host)return;
-  const data=latestDashboardData||{}, rows=intelligentReportRows(intelligentReportDate), p=data.patient||{};
-  const vitals=(data.vitals||[]).filter(x=>activityDateISO(x.recorded_at)===intelligentReportDate);
-  const meds=rows.filter(x=>x.category==='medicines'), nursing=rows.filter(x=>x.category==='nursing'), care=rows.filter(x=>x.category==='care'), food=rows.filter(x=>x.category==='food'), physio=rows.filter(x=>x.category==='physiotherapy'), moments=rows.filter(x=>x.category==='moments');
-  const section=(title,items)=>`<section class="family-report-section"><h3>${esc(title)}</h3>${items.length?items.map(x=>`<article><b>${esc(timeIN(x.at))} · ${esc(x.title)}</b>${x.note?`<small>${esc(x.note)}</small>`:''}</article>`).join(''):'<p>No records for this date.</p>'}</section>`;
-  host.innerHTML=`<div class="family-report-cover"><span>Samara Assisted Living</span><h2>Intelligent Patient Report</h2><b>${esc(p.patient_name||familySession?.patient_name||'Resident')}</b><small>${esc(p.patient_code||familySession?.patient_code||'')} · ${esc(dateIN(intelligentReportDate))}</small><p>View-only family report generated from the resident's Family Portal-visible ERP records.</p></div>
-  <div class="family-report-summary"><article><span>Medicines</span><strong>${meds.length}</strong></article><article><span>Vitals</span><strong>${vitals.length}</strong></article><article><span>Nursing Procedures</span><strong>${nursing.length}</strong></article><article><span>Care</span><strong>${care.length}</strong></article><article><span>Food & Diet</span><strong>${food.length}</strong></article></div>
-  ${section('Medicines',meds)}${section('Vitals',rows.filter(x=>x.category==='vitals'))}${section('Nursing Procedures',nursing)}${section('Daily Care',care)}${section('Food & Diet',food)}${section('Physiotherapy',physio)}${section('Daily Moments',moments)}`;
+let intelligentReportFiles=[];
+let intelligentReportIndex=0;
+function renderExistingIntelligentReport(){
+  const host=document.querySelector('#intelligent-report-content');
+  const select=document.querySelector('#intelligent-report-date');
+  if(!host||!select)return;
+  if(!intelligentReportFiles.length){host.innerHTML='<div class="activity-empty"><b>No Intelligent Patient Report PDF is available yet.</b><br><small>Reports will appear here after the original ERP Intelligent Patient Report has been generated/sent through Samara WhatsApp API.</small></div>';select.innerHTML='<option>No reports available</option>';return;}
+  intelligentReportIndex=Math.max(0,Math.min(intelligentReportIndex,intelligentReportFiles.length-1));
+  const r=intelligentReportFiles[intelligentReportIndex];
+  select.innerHTML=intelligentReportFiles.map((x,i)=>`<option value="${i}" ${i===intelligentReportIndex?'selected':''}>${esc(dateIN(x.report_date))}</option>`).join('');
+  host.innerHTML=`<div class="original-report-notice"><b>Original ERP Intelligent Patient Report</b><span>This is the same PDF stored for the WhatsApp API report. The Family Portal does not recreate or alter it.</span></div><div class="original-report-meta"><span><b>Report date:</b> ${esc(dateIN(r.report_date))}</span><span><b>Sent:</b> ${esc(dateTimeIN(r.sent_at||r.created_at))}</span></div><iframe class="original-report-frame" title="Intelligent Patient Report" src="${esc(r.signed_url)}#toolbar=1&navpanes=0"></iframe><div class="original-report-actions"><a class="btn btn-primary" href="${esc(r.signed_url)}" target="_blank" rel="noopener">Open Full Report</a></div>`;
+}
+async function loadExistingIntelligentReports(){
+  const host=document.querySelector('#intelligent-report-content');if(!host||!familySession?.session_token)return;
+  host.innerHTML='<p>Loading original ERP Intelligent Patient Reports…</p>';
+  try{
+    const cfg=window.SAMARA_CONFIG||{};
+    const response=await fetch(`${cfg.supabaseUrl}/functions/v1/daily-patient-report`,{method:'POST',headers:{'Content-Type':'application/json','apikey':cfg.supabaseAnonKey||cfg.supabasePublishableKey||''},body:JSON.stringify({mode:'family_list_existing_reports',session_token:familySession.session_token})});
+    const result=await response.json();if(!response.ok||!result?.ok)throw new Error(result?.error||'Unable to load Intelligent Patient Reports.');
+    intelligentReportFiles=Array.isArray(result.reports)?result.reports:[];intelligentReportIndex=0;renderExistingIntelligentReport();
+  }catch(e){host.innerHTML=`<div class="activity-empty"><b>Could not load Intelligent Patient Reports.</b><br><small>${esc(e.message||'Please try again.')}</small></div>`;}
 }
 function initIntelligentReport(){
-  const input=document.querySelector('#intelligent-report-date');if(!input)return;
-  input.max=todayISO();input.value=intelligentReportDate;
-  input.addEventListener('change',()=>{intelligentReportDate=input.value||todayISO();renderIntelligentReport();});
-  document.querySelector('#intelligent-report-prev')?.addEventListener('click',()=>{const d=new Date(`${intelligentReportDate}T12:00:00`);d.setDate(d.getDate()-1);intelligentReportDate=activityDateISO(d);input.value=intelligentReportDate;renderIntelligentReport();});
-  document.querySelector('#intelligent-report-today')?.addEventListener('click',()=>{intelligentReportDate=todayISO();input.value=intelligentReportDate;renderIntelligentReport();});
+  const select=document.querySelector('#intelligent-report-date');if(!select)return;
+  select.addEventListener('change',()=>{intelligentReportIndex=Number(select.value)||0;renderExistingIntelligentReport();});
+  document.querySelector('#intelligent-report-prev')?.addEventListener('click',()=>{if(!intelligentReportFiles.length)return;intelligentReportIndex=Math.min(intelligentReportFiles.length-1,intelligentReportIndex+1);renderExistingIntelligentReport();});
+  document.querySelector('#intelligent-report-latest')?.addEventListener('click',()=>{intelligentReportIndex=0;renderExistingIntelligentReport();});
 }
 
 function renderDashboard(data){
@@ -273,7 +283,7 @@ function renderDashboard(data){
   const careMetricNote=careLogs.length?`${careLogs.length} care activit${careLogs.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
   const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
   const cond=document.querySelector('#condition-card');if(cond){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
-  const timeline=buildTimeline(data);renderOverviewTimeline();renderIntelligentReport();
+  const timeline=buildTimeline(data);renderOverviewTimeline();
   const lu=document.querySelector('#latest-update');if(lu){const x=timeline[0];lu.innerHTML=x?`<span class="avatar small">SC</span><div><b>Latest ERP Update</b><small>${esc(dateTimeIN(x.at))}</small><p>${esc(x.title)}${x.note?` — ${esc(x.note)}`:''}</p></div>`:'<div><b>No updates recorded yet</b><small>Updates will appear from the Samara ERP.</small></div>';}
 
   const cb=document.querySelector('#care-body');
@@ -406,7 +416,7 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
 });
 document.querySelector('#signout-button')?.addEventListener('click',closePortal);
 document.querySelector('#mobile-menu')?.addEventListener('click',()=>sidebar.classList.toggle('open'));
-function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')renderIntelligentReport();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')loadExistingIntelligentReports();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
 document.querySelectorAll('.side-nav button[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 initOverviewActivityFilters();
 initIntelligentReport();
