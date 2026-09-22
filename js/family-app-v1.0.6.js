@@ -1,4 +1,4 @@
-const FAMILY_PORTAL_VERSION = "1.0.9";
+const FAMILY_PORTAL_VERSION = "1.0.10";
 
 
 const SAMARA_INVITATION_END = new Date(2026, 8, 1, 0, 0, 0); // Visible through 31-Aug-2026; stops from 01-Sep-2026.
@@ -132,6 +132,7 @@ const sidebar = document.querySelector(".sidebar");
 const pageTitle = document.querySelector("#page-title");
 let familySession = null;
 let refreshTimer = null;
+let adminPreviewMode = false;
 
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const money = value => `₹${Number(value || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
@@ -248,7 +249,7 @@ function saveFamilySession(){
   delete safe.login_pin;
   sessionStorage.setItem('samara_family_session',JSON.stringify(safe));
 }
-function openPortal(session){familySession=session||familySession;if(familySession){saveFamilySession();applyFamilySession(familySession);}loginScreen.classList.add('hidden');firstLoginScreen?.classList.add('hidden');portalScreen.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=setInterval(()=>loadDashboard(false),30000);}
+function openPortal(session){familySession=session||familySession;if(familySession){if(!adminPreviewMode)saveFamilySession();applyFamilySession(familySession);}loginScreen.classList.add('hidden');firstLoginScreen?.classList.add('hidden');portalScreen.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=adminPreviewMode?null:setInterval(()=>loadDashboard(false),30000);}
 function showFirstLoginChange(){
   if(!familySession)return;
   loginScreen.classList.add('hidden');portalScreen.classList.add('hidden');firstLoginScreen?.classList.remove('hidden');clearInterval(refreshTimer);refreshTimer=null;
@@ -265,6 +266,37 @@ async function firstLoginRequired(){
     return Boolean(row?.must_change_pin);
   }catch(error){console.warn('First-login status check failed',error);return false;}
 }
+
+
+function renderAdminPreviewMoments(rows){
+  const grid=document.querySelector('#daily-moments-grid');
+  const status=document.querySelector('#daily-moments-status');
+  if(!grid)return;
+  const moments=Array.isArray(rows)?rows:[];
+  if(status)status.textContent='Admin preview uses the same family-visible Daily Moments already loaded in ERP.';
+  grid.innerHTML=moments.length?moments.map((row,index)=>`<article class="moment-card"><div class="moment-video-wrap"><video controls playsinline preload="metadata" src="${esc(row.signed_url||'')}" aria-label="Daily Moment ${index+1}"></video></div><div class="moment-copy"><div class="moment-meta"><span>${esc(momentDateLabel(row.created_at))}</span><span>${esc(momentDaysLeft(row.expires_at))}</span></div><h3>${esc(row.caption||'A moment from Samara')}</h3><small>Shared with care by Samara Assisted Living</small></div></article>`).join(''):'<article class="moment-empty"><div class="moment-empty-icon">♥</div><b>No Daily Moments have been shared during the last 7 days.</b></article>';
+}
+function enableAdminFamilyPreview(previewId){
+  adminPreviewMode=true;
+  document.body.classList.add('admin-preview-mode');
+  const banner=document.createElement('div');banner.id='admin-family-preview-banner';banner.textContent='ADMIN PREVIEW — VIEWING EXACT FAMILY PORTAL · READ ONLY';document.body.prepend(banner);
+  const style=document.createElement('style');style.textContent=`#admin-family-preview-banner{position:sticky;top:0;z-index:2147483000;background:#b01264;color:#fff;padding:10px 14px;text-align:center;font:800 13px/1.25 Arial,sans-serif;letter-spacing:.02em}.admin-preview-mode form button[type=submit],.admin-preview-mode form input,.admin-preview-mode form textarea,.admin-preview-mode form select{pointer-events:none!important;opacity:.68}.admin-preview-mode #refresh-button{display:none!important}`;document.head.appendChild(style);
+  document.querySelectorAll('form button[type="submit"],form input,form textarea,form select').forEach(el=>{el.disabled=true;});
+  const allowedOrigins=['https://app.samaraassistedliving.com','https://samaraassistedliving.com'];
+  const receive=event=>{
+    if(!allowedOrigins.includes(event.origin))return;
+    const d=event.data||{};if(d.type!=='SAMARA_FAMILY_ADMIN_PREVIEW_DATA'||d.preview_id!==previewId)return;
+    window.removeEventListener('message',receive);
+    const session={...(d.session||{}),session_token:'ADMIN-PREVIEW-NO-FAMILY-SESSION'};
+    openPortal(session);renderDashboard(d.dashboard||{});renderAdminPreviewMoments(d.dashboard?.daily_moments||[]);
+    const note=document.querySelector('#resident-contact');if(note)note.textContent=`Admin preview · Viewing as ${session.relative_name||'authorised family member'} · No family login or Last Login update`;
+  };
+  window.addEventListener('message',receive);
+  if(window.opener){for(const origin of allowedOrigins){try{window.opener.postMessage({type:'SAMARA_FAMILY_ADMIN_PREVIEW_REQUEST',preview_id:previewId},origin)}catch(_){}}}
+  window.setTimeout(()=>{if(loginScreen&&!loginScreen.classList.contains('hidden')){const st=document.querySelector('#login-status');if(st)st.textContent='Unable to load Admin Preview. Please close this tab and open Preview Family Portal again from ERP.';}},5000);
+}
+const adminPreviewId=new URLSearchParams(window.location.search).get('admin_preview');
+if(adminPreviewId)enableAdminFamilyPreview(adminPreviewId);
 
 document.querySelectorAll('[data-password-toggle]').forEach(button=>button.addEventListener('click',()=>{
   const field=button.closest('.password-field')?.querySelector('input');if(!field)return;
