@@ -285,8 +285,9 @@ async function startFamilyRazorpayPayment(paymentType='outstanding',advanceAmoun
       key:order.key_id,
       amount:order.amount,
       currency:order.currency||'INR',
-      // Use Samara's full logo in Razorpay Checkout branding.
-      // Keep the checkout title unset so we do not duplicate "Samara Assisted Living" beside the logo.
+      // Razorpay checkout branding: use the full Samara logo and suppress duplicate title text.
+      // The hosted checkout controls the rendered logo dimensions/sidebar spacing.
+      name:'\u00A0',
       image:'https://family.samaraassistedliving.com/samara-logo.png',
       description:`${paymentType==='advance'?'Advance payment':'Outstanding payment'}${order.patient_name?` — ${order.patient_name}`:''}`,
       order_id:order.order_id,
