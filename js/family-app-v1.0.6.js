@@ -180,6 +180,88 @@ function medStatusFor(order, mar){
 }
 function billingSummary(rows){let charges=0,payments=0,discounts=0,refunds=0;for(const x of rows){const a=Number(x.amount||0);const t=String(x.transaction_type||'').toLowerCase();if(t==='charge')charges+=a;else if(t==='payment')payments+=a;else if(t==='discount')discounts+=a;else if(t==='refund')refunds+=a;}return{charges,payments,discounts,refunds,outstanding:charges-payments-discounts+refunds};}
 
+
+function setFamilyPayButtonState(){
+  const btn=document.querySelector('#family-pay-online');
+  if(!btn)return;
+  const bill=billingSummary(latestDashboardData?.billing||[]);
+  const outstanding=Math.max(0,Number(bill.outstanding||0));
+  btn.disabled=adminPreviewMode||!familySession?.session_token||outstanding<1;
+  btn.textContent=outstanding>=1?`Pay Online ${money(outstanding)}`:'No Amount Due';
+  btn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':(outstanding<1?'No outstanding amount is payable':'Pay the current outstanding securely through Razorpay');
+}
+
+async function callRazorpayFunction(name,payload){
+  if(!cfg.supabaseUrl||!cfg.supabasePublishableKey)throw new Error('Payment service is not configured.');
+  const response=await fetch(`${cfg.supabaseUrl}/functions/v1/${name}`,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':cfg.supabasePublishableKey,
+      'Authorization':`Bearer ${cfg.supabasePublishableKey}`
+    },
+    body:JSON.stringify(payload)
+  });
+  const data=await response.json().catch(()=>({}));
+  if(!response.ok||data.success===false)throw new Error(data.error||'Online payment request failed.');
+  return data;
+}
+
+async function startFamilyRazorpayPayment(){
+  const btn=document.querySelector('#family-pay-online');
+  if(!btn||btn.disabled)return;
+  if(adminPreviewMode){alert('Online payment is disabled in Admin Preview.');return;}
+  if(!familySession?.session_token){alert('Your Family Portal session has expired. Please sign in again.');return;}
+  if(typeof window.Razorpay!=='function'){alert('Razorpay Checkout could not be loaded. Please check your internet connection and try again.');return;}
+  const originalText=btn.textContent;
+  btn.disabled=true;btn.textContent='Preparing secure payment…';
+  try{
+    const order=await callRazorpayFunction('razorpay-create-order',{session_token:familySession.session_token});
+    if(!order?.order_id||!order?.key_id||!Number(order.amount))throw new Error('Razorpay order could not be prepared.');
+    const options={
+      key:order.key_id,
+      amount:order.amount,
+      currency:order.currency||'INR',
+      name:'Samara Assisted Living',
+      description:`Outstanding payment${order.patient_name?` — ${order.patient_name}`:''}`,
+      order_id:order.order_id,
+      handler:async function(response){
+        btn.disabled=true;btn.textContent='Verifying payment…';
+        try{
+          const verified=await callRazorpayFunction('razorpay-verify-payment',{
+            session_token:familySession.session_token,
+            razorpay_payment_id:response.razorpay_payment_id,
+            razorpay_order_id:response.razorpay_order_id,
+            razorpay_signature:response.razorpay_signature
+          });
+          if(!verified?.verified&&!verified?.success)throw new Error('Payment could not be verified.');
+          alert(`Payment received successfully.${verified.payment_id?`\nReference: ${verified.payment_id}`:''}`);
+          await loadDashboard(false);
+          setFamilyPayButtonState();
+        }catch(error){
+          console.error('Razorpay verification:',error);
+          alert(`Payment was not posted to Samara Accounts. ${error.message||'Verification failed.'}\nPlease contact Samara with your Razorpay payment reference before attempting another payment.`);
+        }finally{
+          btn.disabled=false;setFamilyPayButtonState();
+        }
+      },
+      modal:{ondismiss:function(){btn.disabled=false;setFamilyPayButtonState();}},
+      theme:{color:'#b01867'}
+    };
+    const checkout=new window.Razorpay(options);
+    checkout.on('payment.failed',function(response){
+      console.error('Razorpay payment failed:',response?.error);
+      alert(response?.error?.description||'Payment was not completed. No payment has been posted to Samara Accounts.');
+      btn.disabled=false;setFamilyPayButtonState();
+    });
+    checkout.open();
+  }catch(error){
+    console.error('Razorpay checkout:',error);
+    alert(error.message||'Unable to start online payment.');
+    btn.disabled=false;btn.textContent=originalText;setFamilyPayButtonState();
+  }
+}
+
 function buildTimeline(data){
   const events=[];
   const push=(category,at,title,note='',status='')=>{if(at)events.push({category,at,title,note,status});};
@@ -346,6 +428,7 @@ function renderDashboard(data){
   const pg=document.querySelector('#physio-progress');if(pg)pg.innerHTML=sess?`<h3>Latest Progress Note</h3><p><b>${esc(dateIN(sess.session_date))} · ${esc(sess.status||'Recorded')}</b><br>${esc(sess.notes||'No notes recorded.')}</p>`:'<h3>Latest Progress Note</h3><p>No physiotherapy sessions recorded.</p>';
 
   const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>ERP ledger</small></article><article class="metric-card"><span>Payments</span><strong>${money(bill.payments)}</strong><small>Received</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Current balance</small></article>`;
+  setFamilyPayButtonState();
   const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?billing.map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc([x.category,x.description].filter(Boolean).join(' · ')||'Transaction')}</td><td>${String(x.transaction_type).toLowerCase()==='charge'?money(x.amount):'—'}</td><td>${String(x.transaction_type).toLowerCase()==='payment'?money(x.amount):'—'}</td><td>${esc(x.payment_mode||'—')}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
 
   const docs=data.documents||[]; const dg=document.querySelector('#documents-grid');if(dg)dg.innerHTML=docs.length?docs.map(x=>`<article><span>▤</span><div><b>${esc(x.document_type||'Document')}</b><small>${esc(x.document_name||'File')} · ${esc(dateIN(x.created_at))}</small></div></article>`).join(''):'<article><span>▤</span><div><b>No documents available</b><small>No family-visible document metadata recorded.</small></div></article>';
@@ -536,6 +619,8 @@ async function loadFamilyMessages(){
  const host=document.querySelector('#family-message-thread');if(!host||!familySession?.session_token)return;host.innerHTML='<p>Loading secure messages…</p>';try{const {data,error}=await supabaseClient.rpc('family_list_messages',{p_session_token:familySession.session_token});if(error)throw error;const rows=Array.isArray(data)?data:[];host.innerHTML=rows.length?rows.map(r=>`<div class="message ${r.direction==='FAMILY_TO_ERP'?'sent':'received'}"><b>${esc(r.direction==='FAMILY_TO_ERP'?'You':(r.sender_name||'Samara Team'))}</b><small>${esc(dateTimeIN(r.created_at))}</small><p>${esc(r.message||'')}</p></div>`).join(''):'<p>No messages yet. You can send a secure message below.</p>';host.scrollTop=host.scrollHeight;}catch(e){host.innerHTML=`<p>${esc(e.message||'Unable to load messages.')}</p>`;}
 }
 document.querySelector('#message-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,s=form.querySelector('.form-status'),b=form.querySelector('button'),text=form.querySelector('textarea');try{b.disabled=true;s.textContent='Sending securely…';const {error}=await supabaseClient.rpc('family_send_message',{p_session_token:familySession.session_token,p_message:text.value});if(error)throw error;text.value='';s.textContent='✓ Message sent securely to Samara.';await loadFamilyMessages();}catch(e){s.textContent=e.message||'Unable to send message.';}finally{b.disabled=false;}});
+
+document.querySelector('#family-pay-online')?.addEventListener('click',startFamilyRazorpayPayment);
 try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;(async()=>{if(await firstLoginRequired()){showFirstLoginChange();return;}openPortal(saved);const ok=await loadDashboard(false);if(!ok)closePortal();})();}}catch(_){sessionStorage.removeItem('samara_family_session');}
 initSamaraInaugurationInvitation();
 console.info(`Samara Family Portal ${FAMILY_PORTAL_VERSION}`);
