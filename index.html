@@ -135,6 +135,17 @@
 <article class="metric-card"><span>Latest Vitals</span><strong>—</strong><small>Loading live ERP data</small></article>
 <article class="metric-card"><span>Outstanding</span><strong>—</strong><small>Loading live ERP data</small></article>
 </div>
+<div class="overview-payment-strip" id="overview-payment-strip">
+  <div class="overview-payment-copy">
+    <span class="eyebrow">Payments</span>
+    <strong>Secure online payments</strong>
+    <small>Pay the current balance or add an advance without opening Billing.</small>
+  </div>
+  <div class="overview-payment-actions">
+    <button class="samara-action-btn advance" type="button" id="overview-pay-advance"><span class="action-icon">▣</span><span>Pay Advance</span></button>
+    <button class="samara-action-btn outstanding" type="button" id="overview-pay-online"><span class="action-icon">▣</span><span id="overview-pay-online-label">Pay Outstanding</span></button>
+  </div>
+</div>
 <div class="dashboard-grid">
 <section class="panel">
 <div class="panel-head"><div><span class="eyebrow">Today</span><h3>Care Timeline</h3></div><button data-open-view="activity">View all</button></div>
@@ -206,11 +217,11 @@
 <section class="view" id="view-billing">
 <div class="section-heading">
   <div><span class="eyebrow">Billing</span><h2>Bills, payments and outstanding amount</h2></div>
-  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px">
-    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end">
-      <button class="primary-small" type="button" id="family-ledger-pdf">⬇ Download Ledger PDF</button>
-      <button class="primary-small" type="button" id="family-pay-online">Pay Outstanding</button>
-      <button class="primary-small" type="button" id="family-pay-advance">Pay Advance</button>
+  <div class="billing-action-wrap">
+    <div class="billing-action-row">
+      <button class="samara-action-btn ledger" type="button" id="family-ledger-pdf"><span class="action-icon">▣</span><span>Download Ledger PDF</span></button>
+      <button class="samara-action-btn advance" type="button" id="family-pay-advance"><span class="action-icon">▣</span><span>Pay Advance</span></button>
+      <button class="samara-action-btn outstanding" type="button" id="family-pay-online"><span class="action-icon">▣</span><span>Pay Outstanding</span></button>
     </div>
     <div class="billing-policy-links" style="font-size:12px;line-height:1.5;text-align:right">
       <a href="https://samaraassistedliving.com/terms.html" target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a>

@@ -191,6 +191,12 @@ function setFamilyPayButtonState(){
   const advanceBtn=document.querySelector('#family-pay-advance');
   if(advanceBtn){advanceBtn.disabled=adminPreviewMode||!familySession?.session_token;advanceBtn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':'Pay an advance securely through Razorpay';}
   btn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':(outstanding<1?'No outstanding amount is payable':'Pay the current outstanding securely through Razorpay');
+  const overviewPay=document.querySelector('#overview-pay-online');
+  const overviewLabel=document.querySelector('#overview-pay-online-label');
+  if(overviewPay){overviewPay.disabled=adminPreviewMode||!familySession?.session_token||outstanding<1;overviewPay.title=btn.title;}
+  if(overviewLabel)overviewLabel.textContent=outstanding>=1?`Pay Outstanding ${money(outstanding)}`:'No Amount Due';
+  const overviewAdvance=document.querySelector('#overview-pay-advance');
+  if(overviewAdvance){overviewAdvance.disabled=adminPreviewMode||!familySession?.session_token;overviewAdvance.title=adminPreviewMode?'Online payment is disabled in Admin Preview':'Pay an advance securely through Razorpay';}
 }
 
 async function callRazorpayFunction(name,payload){
@@ -699,6 +705,8 @@ document.querySelector('#message-form')?.addEventListener('submit',async event=>
 
 document.querySelector('#family-pay-online')?.addEventListener('click',()=>startFamilyRazorpayPayment('outstanding'));
 document.querySelector('#family-pay-advance')?.addEventListener('click',startFamilyAdvancePayment);
+document.querySelector('#overview-pay-online')?.addEventListener('click',()=>startFamilyRazorpayPayment('outstanding'));
+document.querySelector('#overview-pay-advance')?.addEventListener('click',startFamilyAdvancePayment);
 try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;(async()=>{if(await firstLoginRequired()){showFirstLoginChange();return;}openPortal(saved);const ok=await loadDashboard(false);if(!ok)closePortal();})();}}catch(_){sessionStorage.removeItem('samara_family_session');}
 initSamaraInaugurationInvitation();
 console.info(`Samara Family Portal ${FAMILY_PORTAL_VERSION}`);
