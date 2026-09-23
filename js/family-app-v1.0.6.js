@@ -209,6 +209,61 @@ async function callRazorpayFunction(name,payload){
   return data;
 }
 
+
+
+// v1.0.18 — Samara secure payment modal experience for every Razorpay payment
+function ensureSamaraPaymentModal(){
+  let root=document.querySelector('#samara-payment-modal');
+  if(root)return root;
+  root=document.createElement('div');
+  root.id='samara-payment-modal';
+  root.className='samara-payment-modal';
+  root.setAttribute('aria-hidden','true');
+  root.innerHTML=`<div class="samara-payment-backdrop"></div><section class="samara-payment-card" role="dialog" aria-modal="true" aria-labelledby="samara-payment-title"><button type="button" class="samara-payment-close" aria-label="Close">×</button><img class="samara-payment-logo" src="samara-logo.png" alt="Samara Assisted Living"><div class="samara-payment-body"></div></section>`;
+  document.body.appendChild(root);
+  root.querySelector('.samara-payment-close').addEventListener('click',()=>closeSamaraPaymentModal(null));
+  root.querySelector('.samara-payment-backdrop').addEventListener('click',()=>closeSamaraPaymentModal(null));
+  return root;
+}
+let samaraPaymentResolve=null;
+function closeSamaraPaymentModal(value){
+  const root=document.querySelector('#samara-payment-modal');
+  if(root){root.classList.remove('open');root.setAttribute('aria-hidden','true');}
+  const resolve=samaraPaymentResolve;samaraPaymentResolve=null;if(resolve)resolve(value);
+}
+function showSamaraPaymentModal(html,{closable=true}={}){
+  const root=ensureSamaraPaymentModal();
+  root.querySelector('.samara-payment-body').innerHTML=html;
+  root.querySelector('.samara-payment-close').style.display=closable?'flex':'none';
+  root.classList.add('open');root.setAttribute('aria-hidden','false');
+  return root;
+}
+function samaraAdvanceAmountDialog(){
+  return new Promise(resolve=>{
+    samaraPaymentResolve=resolve;
+    const root=showSamaraPaymentModal(`<div class="samara-payment-heading"><div class="samara-payment-icon">₹</div><div><h2 id="samara-payment-title">Enter Advance Payment</h2><p>Enter the amount you would like to pay in advance to Samara Assisted Living.</p></div></div><label class="samara-amount-field"><span>₹</span><input id="samara-advance-amount" inputmode="decimal" autocomplete="off" placeholder="0" aria-label="Advance amount"></label><p class="samara-payment-note">You can pay any amount as advance. This will be adjusted against future bills.</p><div class="samara-payment-actions"><button type="button" class="samara-btn secondary" data-action="cancel">Cancel</button><button type="button" class="samara-btn primary" data-action="continue">Continue <span>→</span></button></div>`);
+    const input=root.querySelector('#samara-advance-amount');setTimeout(()=>input?.focus(),50);
+    root.querySelector('[data-action="cancel"]').onclick=()=>closeSamaraPaymentModal(null);
+    root.querySelector('[data-action="continue"]').onclick=()=>{const amount=Number(String(input.value||'').replace(/,/g,'').trim());if(!Number.isFinite(amount)||amount<1||amount>500000){input.classList.add('invalid');root.querySelector('.samara-payment-note').textContent='Please enter an amount between ₹1 and ₹5,00,000.';return;}closeSamaraPaymentModal(amount);};
+    input.addEventListener('keydown',e=>{if(e.key==='Enter')root.querySelector('[data-action="continue"]').click();});
+  });
+}
+function samaraConfirmPaymentDialog(paymentType,amount){
+  return new Promise(resolve=>{
+    samaraPaymentResolve=resolve;
+    const isAdvance=paymentType==='advance';
+    const root=showSamaraPaymentModal(`<div class="samara-payment-heading"><div class="samara-payment-icon secure">▣</div><div><h2 id="samara-payment-title">Confirm ${isAdvance?'Advance':'Outstanding'} Payment</h2><p>Please confirm the details below.</p></div></div><div class="samara-payment-amount-row"><strong>Amount</strong><b>${money(amount)}</b></div><p class="samara-payment-note">${isAdvance?'This amount will be recorded as an advance payment to Samara Assisted Living and adjusted against future bills.':'This payment will be applied against the current outstanding amount in the Samara ERP ledger.'}</p><div class="samara-payment-actions"><button type="button" class="samara-btn secondary" data-action="cancel">Cancel</button><button type="button" class="samara-btn primary" data-action="confirm">Confirm &amp; Pay <span>→</span></button></div>`);
+    root.querySelector('[data-action="cancel"]').onclick=()=>closeSamaraPaymentModal(false);
+    root.querySelector('[data-action="confirm"]').onclick=()=>closeSamaraPaymentModal(true);
+  });
+}
+function showSamaraPaymentRedirect(){
+  showSamaraPaymentModal(`<div class="samara-payment-loading"><img src="samara-logo.png" alt="Samara Assisted Living"><div class="samara-payment-spinner" aria-hidden="true"></div><h2 id="samara-payment-title">Redirecting to secure payment gateway</h2><p>Please wait for a moment…</p><p>You will be taken to Razorpay's secure payment page to complete your payment.</p><div class="samara-secure-strip">🔒 <span>Your payment is secured and encrypted.<br>Do not close this window.</span></div></div>`,{closable:false});
+}
+function hideSamaraPaymentRedirect(){
+  const root=document.querySelector('#samara-payment-modal');if(root){root.classList.remove('open');root.setAttribute('aria-hidden','true');}
+}
+
 async function startFamilyRazorpayPayment(paymentType='outstanding',advanceAmount=null){
   const btn=document.querySelector(paymentType==='advance'?'#family-pay-advance':'#family-pay-online');
   if(!btn||btn.disabled)return;
@@ -216,7 +271,13 @@ async function startFamilyRazorpayPayment(paymentType='outstanding',advanceAmoun
   if(!familySession?.session_token){alert('Your Family Portal session has expired. Please sign in again.');return;}
   if(typeof window.Razorpay!=='function'){alert('Razorpay Checkout could not be loaded. Please check your internet connection and try again.');return;}
   const originalText=btn.textContent;
+  const bill=billingSummary(latestDashboardData?.billing||[]);
+  const displayAmount=paymentType==='advance'?Number(advanceAmount):Math.max(0,Number(bill.outstanding||0));
+  if(!Number.isFinite(displayAmount)||displayAmount<1)return;
+  const confirmed=await samaraConfirmPaymentDialog(paymentType,displayAmount);
+  if(!confirmed)return;
   btn.disabled=true;btn.textContent='Preparing secure payment…';
+  showSamaraPaymentRedirect();
   try{
     const order=await callRazorpayFunction('razorpay-create-order',{session_token:familySession.session_token,payment_type:paymentType,...(paymentType==='advance'?{advance_amount:Number(advanceAmount)}:{})});
     if(!order?.order_id||!order?.key_id||!Number(order.amount))throw new Error('Razorpay order could not be prepared.');
@@ -256,8 +317,10 @@ async function startFamilyRazorpayPayment(paymentType='outstanding',advanceAmoun
       alert(response?.error?.description||'Payment was not completed. No payment has been posted to Samara Accounts.');
       btn.disabled=false;setFamilyPayButtonState();
     });
+    hideSamaraPaymentRedirect();
     checkout.open();
   }catch(error){
+    hideSamaraPaymentRedirect();
     console.error('Razorpay checkout:',error);
     alert(error.message||'Unable to start online payment.');
     btn.disabled=false;btn.textContent=originalText;setFamilyPayButtonState();
@@ -268,11 +331,8 @@ async function startFamilyRazorpayPayment(paymentType='outstanding',advanceAmoun
 async function startFamilyAdvancePayment(){
   if(adminPreviewMode){alert('Online payment is disabled in Admin Preview.');return;}
   if(!familySession?.session_token){alert('Your Family Portal session has expired. Please sign in again.');return;}
-  const raw=prompt('Enter advance amount to pay (₹):');
-  if(raw===null)return;
-  const amount=Number(String(raw).replace(/,/g,'').trim());
-  if(!Number.isFinite(amount)||amount<1||amount>500000){alert('Please enter an advance amount between ₹1 and ₹5,00,000.');return;}
-  if(!confirm(`Confirm advance payment of ${money(amount)} to Samara Assisted Living?`))return;
+  const amount=await samaraAdvanceAmountDialog();
+  if(amount===null)return;
   await startFamilyRazorpayPayment('advance',amount);
 }
 
