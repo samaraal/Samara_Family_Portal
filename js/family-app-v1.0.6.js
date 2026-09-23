@@ -178,7 +178,7 @@ function medStatusFor(order, mar){
   const given=logs.filter(x=>['given','administered','completed'].includes(String(x.status||'').toLowerCase())).length;
   return `${given}/${logs.length} recorded`;
 }
-function billingSummary(rows){let charges=0,payments=0,discounts=0,refunds=0;for(const x of rows){const a=Number(x.amount||0);const t=String(x.transaction_type||'').toLowerCase();if(t==='charge')charges+=a;else if(t==='payment')payments+=a;else if(t==='discount')discounts+=a;else if(t==='refund')refunds+=a;}return{charges,payments,discounts,refunds,outstanding:charges-payments-discounts+refunds};}
+function billingSummary(rows){let charges=0,payments=0,advances=0,discounts=0,refunds=0;for(const x of rows){const a=Number(x.amount||0);const t=String(x.transaction_type||'').toLowerCase();if(t==='charge')charges+=a;else if(t==='payment')payments+=a;else if(t==='advance')advances+=a;else if(t==='discount')discounts+=a;else if(t==='refund')refunds+=a;}return{charges,payments,advances,discounts,refunds,outstanding:charges-payments-advances-discounts+refunds};}
 
 
 function setFamilyPayButtonState(){
@@ -187,7 +187,9 @@ function setFamilyPayButtonState(){
   const bill=billingSummary(latestDashboardData?.billing||[]);
   const outstanding=Math.max(0,Number(bill.outstanding||0));
   btn.disabled=adminPreviewMode||!familySession?.session_token||outstanding<1;
-  btn.textContent=outstanding>=1?`Pay Online ${money(outstanding)}`:'No Amount Due';
+  btn.textContent=outstanding>=1?`Pay Outstanding ${money(outstanding)}`:'No Amount Due';
+  const advanceBtn=document.querySelector('#family-pay-advance');
+  if(advanceBtn){advanceBtn.disabled=adminPreviewMode||!familySession?.session_token;advanceBtn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':'Pay an advance securely through Razorpay';}
   btn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':(outstanding<1?'No outstanding amount is payable':'Pay the current outstanding securely through Razorpay');
 }
 
@@ -207,8 +209,8 @@ async function callRazorpayFunction(name,payload){
   return data;
 }
 
-async function startFamilyRazorpayPayment(){
-  const btn=document.querySelector('#family-pay-online');
+async function startFamilyRazorpayPayment(paymentType='outstanding',advanceAmount=null){
+  const btn=document.querySelector(paymentType==='advance'?'#family-pay-advance':'#family-pay-online');
   if(!btn||btn.disabled)return;
   if(adminPreviewMode){alert('Online payment is disabled in Admin Preview.');return;}
   if(!familySession?.session_token){alert('Your Family Portal session has expired. Please sign in again.');return;}
@@ -216,14 +218,14 @@ async function startFamilyRazorpayPayment(){
   const originalText=btn.textContent;
   btn.disabled=true;btn.textContent='Preparing secure payment…';
   try{
-    const order=await callRazorpayFunction('razorpay-create-order',{session_token:familySession.session_token});
+    const order=await callRazorpayFunction('razorpay-create-order',{session_token:familySession.session_token,payment_type:paymentType,...(paymentType==='advance'?{advance_amount:Number(advanceAmount)}:{})});
     if(!order?.order_id||!order?.key_id||!Number(order.amount))throw new Error('Razorpay order could not be prepared.');
     const options={
       key:order.key_id,
       amount:order.amount,
       currency:order.currency||'INR',
       name:'Samara Assisted Living',
-      description:`Outstanding payment${order.patient_name?` — ${order.patient_name}`:''}`,
+      description:`${paymentType==='advance'?'Advance payment':'Outstanding payment'}${order.patient_name?` — ${order.patient_name}`:''}`,
       order_id:order.order_id,
       handler:async function(response){
         btn.disabled=true;btn.textContent='Verifying payment…';
@@ -235,7 +237,7 @@ async function startFamilyRazorpayPayment(){
             razorpay_signature:response.razorpay_signature
           });
           if(!verified?.verified&&!verified?.success)throw new Error('Payment could not be verified.');
-          alert(`Payment received successfully.${verified.payment_id?`\nReference: ${verified.payment_id}`:''}`);
+          alert(`${paymentType==='advance'?'Advance':'Payment'} received successfully.${verified.payment_id?`\nReference: ${verified.payment_id}`:''}`);
           await loadDashboard(false);
           setFamilyPayButtonState();
         }catch(error){
@@ -260,6 +262,18 @@ async function startFamilyRazorpayPayment(){
     alert(error.message||'Unable to start online payment.');
     btn.disabled=false;btn.textContent=originalText;setFamilyPayButtonState();
   }
+}
+
+
+async function startFamilyAdvancePayment(){
+  if(adminPreviewMode){alert('Online payment is disabled in Admin Preview.');return;}
+  if(!familySession?.session_token){alert('Your Family Portal session has expired. Please sign in again.');return;}
+  const raw=prompt('Enter advance amount to pay (₹):');
+  if(raw===null)return;
+  const amount=Number(String(raw).replace(/,/g,'').trim());
+  if(!Number.isFinite(amount)||amount<1||amount>500000){alert('Please enter an advance amount between ₹1 and ₹5,00,000.');return;}
+  if(!confirm(`Confirm advance payment of ${money(amount)} to Samara Assisted Living?`))return;
+  await startFamilyRazorpayPayment('advance',amount);
 }
 
 function buildTimeline(data){
@@ -370,7 +384,7 @@ function renderDischargeBanner(data,bill){
   if(!card){card=document.createElement('div');card.id='discharge-summary-card';card.className='discharge-summary-card';const cond=document.querySelector('#condition-card');banner.insertBefore(card,cond||null);}
   const outstanding=Number(bill?.outstanding||0);
   const finalAmount=Math.max(0,Number(bill?.charges||0)-Number(bill?.discounts||0)+Number(bill?.refunds||0));
-  const paid=Number(bill?.payments||0);
+  const paid=Number(bill?.payments||0)+Number(bill?.advances||0);
   const settled=Math.abs(outstanding)<0.01;
   const departureText=departure?dateTimeIN(departure):(p.discharge_date?dateIN(p.discharge_date):'Discharged');
   card.innerHTML=`<div class="discharge-date"><span class="discharge-icon">↪</span><div><span>Discharged on</span><strong>${esc(departureText)}</strong></div></div><div class="discharge-finance"><b class="${settled?'settled':'pending'}">${settled?'✓ All bills settled':'● Payment pending'}</b></div>`;
@@ -427,9 +441,9 @@ function renderDashboard(data){
   const pp=document.querySelector('#physio-plan');if(pp)pp.innerHTML=plan?`<h3>Current Plan</h3><div class="detail-grid"><div><span>Therapy Type</span><b>${esc(plan.therapy_type||'—')}</b></div><div><span>Frequency</span><b>${esc(plan.frequency||'—')}</b></div><div><span>Preferred Time</span><b>${esc(plan.preferred_time||'—')}</b></div><div><span>Physiotherapist</span><b>${esc(plan.physiotherapist_name||'—')}</b></div></div>`:'<h3>Current Plan</h3><p>No active physiotherapy plan recorded.</p>';
   const pg=document.querySelector('#physio-progress');if(pg)pg.innerHTML=sess?`<h3>Latest Progress Note</h3><p><b>${esc(dateIN(sess.session_date))} · ${esc(sess.status||'Recorded')}</b><br>${esc(sess.notes||'No notes recorded.')}</p>`:'<h3>Latest Progress Note</h3><p>No physiotherapy sessions recorded.</p>';
 
-  const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>ERP ledger</small></article><article class="metric-card"><span>Payments</span><strong>${money(bill.payments)}</strong><small>Received</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Current balance</small></article>`;
+  const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>ERP ledger</small></article><article class="metric-card"><span>Payments / Advance</span><strong>${money(bill.payments+bill.advances)}</strong><small>Received</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Current balance</small></article>`;
   setFamilyPayButtonState();
-  const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?billing.map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc([x.category,x.description].filter(Boolean).join(' · ')||'Transaction')}</td><td>${String(x.transaction_type).toLowerCase()==='charge'?money(x.amount):'—'}</td><td>${String(x.transaction_type).toLowerCase()==='payment'?money(x.amount):'—'}</td><td>${esc(x.payment_mode||'—')}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
+  const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?billing.map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc([x.category,x.description].filter(Boolean).join(' · ')||'Transaction')}</td><td>${String(x.transaction_type).toLowerCase()==='charge'?money(x.amount):'—'}</td><td>${['payment','advance'].includes(String(x.transaction_type).toLowerCase())?money(x.amount):'—'}</td><td>${esc(x.payment_mode||'—')}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
 
   const docs=data.documents||[]; const dg=document.querySelector('#documents-grid');if(dg)dg.innerHTML=docs.length?docs.map(x=>`<article><span>▤</span><div><b>${esc(x.document_type||'Document')}</b><small>${esc(x.document_name||'File')} · ${esc(dateIN(x.created_at))}</small></div></article>`).join(''):'<article><span>▤</span><div><b>No documents available</b><small>No family-visible document metadata recorded.</small></div></article>';
 }
@@ -464,7 +478,7 @@ function familyLedgerPdf(){
   </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Assisted Living Management System</p><h2>PATIENT ACCOUNT LEDGER</h2><p>Generated on: ${esc(generated)}</p></div></div>
   <div class="meta"><div><b>Patient Name</b> ${esc(patientName)}</div><div><b>Resident ID</b> ${esc(residentId)}</div><div><b>Room / Bed</b> ${esc(room)}</div><div><b>Admission Date</b> ${esc(dateIN(admission))}</div></div>
   <div class="section">Patient Ledger</div><table><thead><tr><th style="width:5%">Sl.</th><th style="width:11%">Date</th><th style="width:35%">Particulars</th><th style="width:12%">Reference</th><th style="width:12%">Debit</th><th style="width:12%">Credit</th><th style="width:13%">Balance</th></tr></thead><tbody>${rows}</tbody></table>
-  <table class="summary"><tr><td>Total Charges</td><td class="num">${money(bill.charges)}</td></tr><tr><td>Payments Received</td><td class="num">${money(bill.payments)}</td></tr><tr><td>Discounts</td><td class="num">${money(bill.discounts)}</td></tr><tr><td>Refunds</td><td class="num">${money(bill.refunds)}</td></tr><tr><td>OUTSTANDING BALANCE</td><td class="num">${money(bill.outstanding)}</td></tr></table>
+  <table class="summary"><tr><td>Total Charges</td><td class="num">${money(bill.charges)}</td></tr><tr><td>Payments Received</td><td class="num">${money(bill.payments)}</td></tr><tr><td>Advance Received</td><td class="num">${money(bill.advances)}</td></tr><tr><td>Discounts</td><td class="num">${money(bill.discounts)}</td></tr><tr><td>Refunds</td><td class="num">${money(bill.refunds)}</td></tr><tr><td>OUTSTANDING BALANCE</td><td class="num">${money(bill.outstanding)}</td></tr></table>
   <div class="note"><b>Important:</b> This ledger reflects financial transactions recorded in the Samara Care ERP as at ${esc(generated)}.</div><div class="sign"><div>Prepared By</div><div>Accounts / Administrator</div><div>Patient / Attendant</div></div><div class="foot">Samara Health Care LLP · Computer-generated patient ledger · No manual alteration permitted</div><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`;
   const w=window.open('','_blank');
   if(!w){alert('Please allow pop-ups to download the Patient Ledger PDF.');return;}
@@ -620,7 +634,8 @@ async function loadFamilyMessages(){
 }
 document.querySelector('#message-form')?.addEventListener('submit',async event=>{event.preventDefault();const form=event.currentTarget,s=form.querySelector('.form-status'),b=form.querySelector('button'),text=form.querySelector('textarea');try{b.disabled=true;s.textContent='Sending securely…';const {error}=await supabaseClient.rpc('family_send_message',{p_session_token:familySession.session_token,p_message:text.value});if(error)throw error;text.value='';s.textContent='✓ Message sent securely to Samara.';await loadFamilyMessages();}catch(e){s.textContent=e.message||'Unable to send message.';}finally{b.disabled=false;}});
 
-document.querySelector('#family-pay-online')?.addEventListener('click',startFamilyRazorpayPayment);
+document.querySelector('#family-pay-online')?.addEventListener('click',()=>startFamilyRazorpayPayment('outstanding'));
+document.querySelector('#family-pay-advance')?.addEventListener('click',startFamilyAdvancePayment);
 try{const saved=JSON.parse(sessionStorage.getItem('samara_family_session')||'null');if(saved?.session_token){familySession=saved;(async()=>{if(await firstLoginRequired()){showFirstLoginChange();return;}openPortal(saved);const ok=await loadDashboard(false);if(!ok)closePortal();})();}}catch(_){sessionStorage.removeItem('samara_family_session');}
 initSamaraInaugurationInvitation();
 console.info(`Samara Family Portal ${FAMILY_PORTAL_VERSION}`);
