@@ -187,9 +187,18 @@ function setFamilyPayButtonState(){
   const bill=billingSummary(latestDashboardData?.billing||[]);
   const outstanding=Math.max(0,Number(bill.outstanding||0));
   btn.disabled=adminPreviewMode||!familySession?.session_token||outstanding<1;
-  btn.textContent=outstanding>=1?`Pay Outstanding ${money(outstanding)}`:'No Amount Due';
+  // Always rebuild the approved button contents after Razorpay returns. During checkout the
+  // button text is temporarily replaced with Preparing/Verifying status text. Restoring the
+  // full markup here prevents that transient status from remaining until a manual refresh.
+  btn.innerHTML=outstanding>=1
+    ? `<span class="action-icon">₹</span><span>Pay Outstanding ${money(outstanding)}</span>`
+    : `<span class="action-icon">₹</span><span>No Amount Due</span>`;
   const advanceBtn=document.querySelector('#family-pay-advance');
-  if(advanceBtn){advanceBtn.disabled=adminPreviewMode||!familySession?.session_token;advanceBtn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':'Pay an advance securely through Razorpay';}
+  if(advanceBtn){
+    advanceBtn.disabled=adminPreviewMode||!familySession?.session_token;
+    advanceBtn.innerHTML='<span class="action-icon">▰</span><span>Pay Advance</span>';
+    advanceBtn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':'Pay an advance securely through Razorpay';
+  }
   btn.title=adminPreviewMode?'Online payment is disabled in Admin Preview':(outstanding<1?'No outstanding amount is payable':'Pay the current outstanding securely through Razorpay');
   const overviewPay=document.querySelector('#overview-pay-online');
   const overviewLabel=document.querySelector('#overview-pay-online-label');
