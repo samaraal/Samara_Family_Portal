@@ -391,3 +391,9 @@ td{color:#4d3b46}
 @media(min-width:1100px){#view-billing .section-heading{align-items:flex-start}.billing-action-wrap{min-width:720px}}
 @media(max-width:900px){.billing-action-row{grid-template-columns:1fr 1fr}.billing-action-row .ledger{grid-column:1/-1}}
 @media(max-width:600px){.billing-action-row{grid-template-columns:1fr}.billing-action-row .ledger{grid-column:auto}.samara-action-btn{min-height:58px!important;font-size:16px!important}.samara-action-btn .action-icon{width:36px;height:36px;font-size:18px}#view-billing .billing-metrics{grid-template-columns:1fr!important}#view-billing .billing-metrics .metric-card{min-height:132px;padding:22px 20px 20px 102px!important}#view-billing .billing-metrics .metric-card:before{left:20px;top:30px;width:60px;height:60px;font-size:28px}#view-billing .billing-metrics .metric-card strong{font-size:2rem}.overview-payment-actions{grid-template-columns:1fr!important}}
+
+/* Razorpay verified-payment success state (v1.0.21) */
+.samara-payment-success .samara-payment-success-icon{width:78px;height:78px;margin:0 auto 18px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#e7f8ee;color:#079447;font-size:44px;font-weight:900;box-shadow:0 10px 28px rgba(7,148,71,.14)}
+.samara-payment-success .samara-payment-amount-row{margin:18px auto;max-width:560px}
+.samara-payment-success>p{text-align:center;font-size:17px;line-height:1.55;color:#65535d}
+@media(max-width:640px){.samara-payment-success .samara-payment-success-icon{width:66px;height:66px;font-size:38px}.samara-payment-success>p{font-size:16px}}

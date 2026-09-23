@@ -307,9 +307,16 @@ async function startFamilyRazorpayPayment(paymentType='outstanding',advanceAmoun
             razorpay_signature:response.razorpay_signature
           });
           if(!verified?.verified&&!verified?.success)throw new Error('Payment could not be verified.');
-          alert(`${paymentType==='advance'?'Advance':'Payment'} received successfully.${verified.payment_id?`\nReference: ${verified.payment_id}`:''}`);
-          await loadDashboard(false);
+          // Reset payment controls immediately after server verification so no button can remain on
+          // "Verifying payment…" while the refreshed ledger is loading.
+          btn.disabled=false;
           setFamilyPayButtonState();
+          const successAmount=Number(verified.amount||displayAmount||0);
+          const successTitle=paymentType==='advance'?'Advance Payment Successful':'Payment Successful';
+          const successNote=paymentType==='advance'?'Advance received successfully and posted to the Samara ledger.':'Payment received successfully and posted to the Samara ledger.';
+          showSamaraPaymentModal(`<div class="samara-payment-loading samara-payment-success"><div class="samara-payment-success-icon">✓</div><h2 id="samara-payment-title">${successTitle}</h2><div class="samara-payment-amount-row"><strong>Amount received</strong><b>${money(successAmount)}</b></div><p>${successNote}</p>${verified.payment_id?`<div class="samara-secure-strip"><span>Reference: ${esc(verified.payment_id)}</span></div>`:''}</div>`,{closable:false});
+          setTimeout(()=>hideSamaraPaymentRedirect(),3200);
+          try{await loadDashboard(false);}finally{setFamilyPayButtonState();}
         }catch(error){
           console.error('Razorpay verification:',error);
           alert(`Payment was not posted to Samara Accounts. ${error.message||'Verification failed.'}\nPlease contact Samara with your Razorpay payment reference before attempting another payment.`);
