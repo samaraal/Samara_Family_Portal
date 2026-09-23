@@ -1,0 +1,7 @@
+SAMARA FAMILY PORTAL — LOGIN AUDIT UPDATE
+
+1. First run 137_family_portal_login_audit.sql from the ERP package in Supabase SQL Editor.
+2. Then upload/replace these Family Portal files: index.html, service-worker.js, js/family-app-v1.0.6.js.
+3. A genuine successful family login is now written to ERP > Admin > Audit Trail with Module = Family Portal Login.
+4. Admin Preview is deliberately NOT counted as a family login.
+5. Historical recovery: the SQL imports each access record's existing last_login_at as one "Family Portal Login (Recovered)" entry. It cannot reconstruct older individual logins that were never stored.

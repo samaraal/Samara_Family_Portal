@@ -487,6 +487,8 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
   submit.disabled=true;status.textContent='Checking secure family access…';
   try{const {data,error}=await supabaseClient.rpc('family_portal_login_by_patient',{p_patient_id:patientId,p_pin:pin});if(error)throw error;const row=Array.isArray(data)?data[0]:data;if(!row){status.textContent='Patient ID or Access PIN is incorrect, or Family Portal access is disabled.';return;}
     familySession={access_id:row.access_id,patient_uuid:row.patient_uuid,patient_code:row.patient_code,patient_name:row.patient_name,room_no:row.room_no,bed_no:row.bed_no,admission_date:row.admission_date,relative_name:row.relative_name,relationship:row.relationship,session_token:row.session_token,login_pin:pin};
+    // Audit only a real successful family login. Admin Preview never reaches this path.
+    try{await supabaseClient.rpc('record_family_portal_login_event',{p_session_token:familySession.session_token,p_access_id:familySession.access_id,p_user_agent:navigator.userAgent||null});}catch(auditError){console.warn('Family Portal login audit unavailable',auditError);}
     if(await firstLoginRequired()){status.textContent='';showFirstLoginChange();return;}
     const {data:dashboard,error:dashError}=await supabaseClient.rpc('family_portal_dashboard',{p_session_token:familySession.session_token});if(dashError)throw dashError;if(!dashboard)throw new Error('Unable to read the resident record.');
     openPortal(familySession);renderDashboard(dashboard);status.textContent='';
