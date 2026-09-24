@@ -934,6 +934,24 @@ Please access the Samara Family Portal for detailed account information.`;
       [balanceLabel,balanceDisplay,balanceTone,'signed']
     ];
 
+    if(paymentWorkspace){
+      return h(React.Fragment,null,
+        h('div',{className:'samara-payment-page'},
+          h('div',{className:'samara-payment-page-head'},
+            h('div',null,h('div',{className:'samara-payment-eyebrow'},'SAMARA SECURE PAYMENT'),h('h2',null,'Online Payment'),h('p',null,'Create, share or display the Razorpay payment request for the selected patient.')),
+            h('button',{type:'button',className:'btn samara-payment-back',disabled:paymentRequestBusy,onClick:()=>{setPaymentWorkspace(false);setPaymentRequest(null)}},'← Back to Payments')
+          ),
+          paymentRequestBusy&&h('div',{className:'samara-payment-preparing'},h('div',{className:'samara-payment-spinner'}),h('strong',null,'Preparing secure Razorpay payment link…'),h('span',null,'Please wait for a moment. Do not click again.')),
+          !paymentRequestBusy&&paymentRequest&&paymentRequest.patient_id===patientFilter&&h('div',{className:'samara-payment-request-card'},
+            h('div',{className:'samara-payment-request-summary'},h('div',null,h('span',null,'Patient'),h('strong',null,paymentRequest.patient_name||'Patient')),h('div',null,h('span',null,'Purpose'),h('strong',null,paymentRequest.payment_type==='advance'?'Advance Payment':'Outstanding Payment')),h('div',null,h('span',null,'Amount'),h('strong',{className:'samara-payment-request-amount'},money(paymentRequest.amount)))),
+            h('div',{className:'samara-payment-link-box'},h('span',null,'Secure Razorpay link'),h('code',null,paymentRequest.payment_url)),
+            h('div',{className:'samara-payment-action-grid'},h('button',{type:'button',className:'btn btn-whatsapp',onClick:sendPaymentLinkWhatsApp},'Send via WhatsApp'),h('button',{type:'button',className:'btn btn-primary',onClick:showPaymentQr},'Show QR Code'),h('button',{type:'button',className:'btn btn-secondary',onClick:async()=>{await navigator.clipboard.writeText(paymentRequest.payment_url);notify('success','Link copied','Secure payment link copied to clipboard.')}},'Copy Link'),h('button',{type:'button',className:'btn btn-secondary',onClick:()=>window.open(paymentRequest.payment_url,'_blank','noopener')},'Open Razorpay'),h('button',{type:'button',className:'btn btn-danger',disabled:paymentRequestBusy,onClick:cancelOnlinePaymentRequest},'Cancel Payment Link')),
+            h('div',{className:'samara-payment-request-foot'},`Request ID: ${paymentRequest.request_code||paymentRequest.id||'—'}${paymentRequest.expires_at?` · Expires ${fmt(paymentRequest.expires_at)}`:''}`)
+          )
+        )
+      );
+    }
+
     return h(React.Fragment,null,
       dischargeTarget&&h(Section,{
         title:'Discharge Final Payment',
@@ -1000,16 +1018,6 @@ Please access the Samara Family Portal for detailed account information.`;
         )
       ),
 
-      paymentWorkspace&&h('div',{className:'samara-payment-workspace'},
-        h('div',{className:'samara-payment-workspace-head'},h('div',null,h('div',{className:'samara-payment-eyebrow'},'SAMARA SECURE PAYMENT'),h('h2',null,'Online Payment'),h('p',null,'Share or display the Razorpay payment request for the selected patient.')),h('button',{type:'button',className:'btn samara-payment-back',onClick:()=>setPaymentWorkspace(false)},'← Back to Payments')),
-        paymentRequestBusy&&h('div',{className:'samara-payment-preparing'},h('div',{className:'samara-payment-spinner'}),h('strong',null,'Preparing secure Razorpay payment link…'),h('span',null,'Please wait for a moment. Do not click again.')),
-        !paymentRequestBusy&&paymentRequest&&paymentRequest.patient_id===patientFilter&&h('div',{className:'samara-payment-request-card'},
-          h('div',{className:'samara-payment-request-summary'},h('div',null,h('span',null,'Patient'),h('strong',null,paymentRequest.patient_name||'Patient')),h('div',null,h('span',null,'Purpose'),h('strong',null,paymentRequest.payment_type==='advance'?'Advance Payment':'Outstanding Payment')),h('div',null,h('span',null,'Amount'),h('strong',{className:'samara-payment-request-amount'},money(paymentRequest.amount)))),
-          h('div',{className:'samara-payment-link-box'},h('span',null,'Secure Razorpay link'),h('code',null,paymentRequest.payment_url)),
-          h('div',{className:'samara-payment-action-grid'},h('button',{type:'button',className:'btn btn-whatsapp',onClick:sendPaymentLinkWhatsApp},'Send via WhatsApp'),h('button',{type:'button',className:'btn btn-primary',onClick:showPaymentQr},'Show QR Code'),h('button',{type:'button',className:'btn btn-secondary',onClick:async()=>{await navigator.clipboard.writeText(paymentRequest.payment_url);notify('success','Link copied','Secure payment link copied to clipboard.')}},'Copy Link'),h('button',{type:'button',className:'btn btn-secondary',onClick:()=>window.open(paymentRequest.payment_url,'_blank','noopener')},'Open Razorpay'),h('button',{type:'button',className:'btn btn-danger',disabled:paymentRequestBusy,onClick:cancelOnlinePaymentRequest},'Cancel Payment Link')),
-          h('div',{className:'samara-payment-request-foot'},`Request ID: ${paymentRequest.request_code||paymentRequest.id||'—'}${paymentRequest.expires_at?` · Expires ${fmt(paymentRequest.expires_at)}`:''}`)
-        )
-      ),
       advancePaymentModal&&h('div',{className:'samara-payment-modal',role:'dialog','aria-modal':'true'},h('div',{className:'samara-payment-backdrop',onClick:()=>!paymentRequestBusy&&setAdvancePaymentModal(false)}),h('div',{className:'samara-payment-card'},h('button',{type:'button',className:'samara-payment-close',disabled:paymentRequestBusy,onClick:()=>setAdvancePaymentModal(false),'aria-label':'Close'},'×'),h('div',{className:'samara-payment-brand'},h('img',{src:'./assets/samara-logo.png',alt:'Samara Assisted Living'})),h('div',{className:'samara-payment-heading'},h('div',{className:'samara-payment-icon'},'₹'),h('div',null,h('h2',null,'Enter Advance Payment'),h('p',null,'Create a secure Razorpay payment link for this patient.'))),h('label',{className:'samara-payment-label'},'Advance amount'),h('div',{className:'samara-amount-field'},h('span',null,'₹'),h('input',{type:'number',min:'1',max:'500000',step:'1',autoFocus:true,value:advancePaymentAmount,onChange:e=>setAdvancePaymentAmount(e.target.value),onKeyDown:e=>{if(e.key==='Enter'&&!paymentRequestBusy)createOnlinePaymentRequest('advance',advancePaymentAmount)}})),h('p',{className:'samara-payment-note'},'The family will receive a Razorpay-hosted secure payment link. Family Portal login is not required.'),h('div',{className:'samara-payment-actions'},h('button',{type:'button',className:'samara-btn secondary',disabled:paymentRequestBusy,onClick:()=>setAdvancePaymentModal(false)},'Cancel'),h('button',{type:'button',className:'samara-btn primary',disabled:paymentRequestBusy,onClick:()=>createOnlinePaymentRequest('advance',advancePaymentAmount)},paymentRequestBusy?'Preparing…':'Create Payment Link')))),
 
       patientFilter&&!ledgerReady&&h('div',{className:patientLedger.error?'message error':'message info'},patientLedger.error||'Loading complete patient ledger…'),
