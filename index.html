@@ -10,6 +10,8 @@
 <link href="./assets/samara-logo.png?v=20260812-global1" rel="icon"/>
 <link href="./css/style.css?v=1.0.21" rel="stylesheet"/>
 <link href="./css/about-us.css?v=1.0.18" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="./css/family-i18n.css?v=1.0.19" rel="stylesheet"/>
 </head>
 <body>
 <div id="app">
@@ -78,7 +80,7 @@
 <aside class="sidebar">
 <div class="sidebar-brand">
 <img alt="Samara Assisted Living" src="./assets/samara-logo.png?v=20260812-global1"/>
-<small>Family Portal v1.0.18</small>
+<small>Family Portal v1.0.19</small>
 </div>
 <nav class="side-nav">
 <button class="active" data-view="overview"><span>⌂</span> Overview</button>
@@ -272,8 +274,8 @@
 <label>Age<input name="age" min="0" max="120" type="number"/></label>
 <label>Contact Person<input name="contact_person" required=""/></label>
 <label>Mobile Number<input inputmode="tel" name="mobile" required=""/></label>
-<label>Care Type<select name="care_type"><option>Direct Elderly Care</option><option>Hospital Discharge Recovery</option><option>Short Stay / Respite</option><option>Long-Term Assisted Living</option><option>Physiotherapy Support</option><option>Special / Dedicated Nurse</option></select></label>
-<label>Preferred Room<select name="preferred_room"><option>Private</option><option>Twin Sharing</option><option>General</option><option>Need Guidance</option></select></label>
+<label>Care Type<select name="care_type"><option value="Direct Elderly Care">Direct Elderly Care</option><option value="Hospital Discharge Recovery">Hospital Discharge Recovery</option><option value="Short Stay / Respite">Short Stay / Respite</option><option value="Long-Term Assisted Living">Long-Term Assisted Living</option><option value="Physiotherapy Support">Physiotherapy Support</option><option value="Special / Dedicated Nurse">Special / Dedicated Nurse</option></select></label>
+<label>Preferred Room<select name="preferred_room"><option value="Private">Private</option><option value="Twin Sharing">Twin Sharing</option><option value="General">General</option><option value="Need Guidance">Need Guidance</option></select></label>
 <label class="full">Current Condition / Requirements<textarea name="condition" rows="5"></textarea></label>
 </div>
 <button class="btn btn-primary" type="submit">Send Admission Enquiry</button>
@@ -298,7 +300,7 @@
 <label>Visitor Name<input name="visitor_name" required="" value="Vimala"/></label>
 <label>Mobile Number<input name="visitor_mobile" required="" value="9176735577"/></label>
 <label>Preferred Date<input name="visit_date" required="" type="date"/></label>
-<label>Preferred Time<select name="visit_time"><option>Morning</option><option>Afternoon</option><option>Evening</option></select></label>
+<label>Preferred Time<select name="visit_time"><option value="Morning">Morning</option><option value="Afternoon">Afternoon</option><option value="Evening">Evening</option></select></label>
 <label class="full">Message<textarea name="message" rows="4"></textarea></label>
 </div>
 <button class="btn btn-primary" type="submit">Send Visit Request</button>
@@ -330,8 +332,8 @@
     <p>You may submit feedback as an authorised family member or on behalf of the resident.</p>
     <form id="family-feedback-form">
       <div class="family-feedback-grid">
-        <label>You Are<select name="respondent_type"><option>Family Member</option><option>Resident / Patient</option></select></label>
-        <label>Category<select name="category"><option>Overall Experience</option><option>Nursing Care</option><option>Caregiver Support</option><option>Food &amp; Diet</option><option>Physiotherapy</option><option>Rooms &amp; Facilities</option><option>Billing</option><option>Administration</option><option>Family Communication</option><option>Compliment</option><option>Suggestion</option><option>Complaint / Concern</option><option>Other</option></select></label>
+        <label>You Are<select name="respondent_type"><option value="Family Member">Family Member</option><option value="Resident / Patient">Resident / Patient</option></select></label>
+        <label>Category<select name="category"><option value="Overall Experience">Overall Experience</option><option value="Nursing Care">Nursing Care</option><option value="Caregiver Support">Caregiver Support</option><option value="Food &amp; Diet">Food &amp; Diet</option><option value="Physiotherapy">Physiotherapy</option><option value="Rooms &amp; Facilities">Rooms &amp; Facilities</option><option value="Billing">Billing</option><option value="Administration">Administration</option><option value="Family Communication">Family Communication</option><option value="Compliment">Compliment</option><option value="Suggestion">Suggestion</option><option value="Complaint / Concern">Complaint / Concern</option><option value="Other">Other</option></select></label>
         <label class="span-2">Rating<div class="family-stars"><input id="f5" name="rating" type="radio" value="5"/><label for="f5">★</label><input id="f4" name="rating" type="radio" value="4"/><label for="f4">★</label><input id="f3" name="rating" type="radio" value="3"/><label for="f3">★</label><input id="f2" name="rating" type="radio" value="2"/><label for="f2">★</label><input id="f1" name="rating" type="radio" value="1"/><label for="f1">★</label></div></label>
         <label class="span-2">Subject<input maxlength="180" name="subject"/></label>
         <label class="span-2">Feedback<textarea maxlength="4000" name="message" required rows="6"></textarea></label>
@@ -379,5 +381,6 @@
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script src="./config.js"></script>
 <script src="./js/family-app-v1.0.6.js?v=1.0.22"></script>
+<script src="./js/family-i18n.js?v=1.0.19"></script>
 </body>
 </html>
