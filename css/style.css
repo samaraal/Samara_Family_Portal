@@ -397,3 +397,11 @@ td{color:#4d3b46}
 .samara-payment-success .samara-payment-amount-row{margin:18px auto;max-width:560px}
 .samara-payment-success>p{text-align:center;font-size:17px;line-height:1.55;color:#65535d}
 @media(max-width:640px){.samara-payment-success .samara-payment-success-icon{width:66px;height:66px;font-size:38px}.samara-payment-success>p{font-size:16px}}
+
+/* v1.0.20: medicine serial numbers + one-tap call buttons under the medicines note */
+th.med-no,td.med-no{width:52px;text-align:center;font-weight:800;color:#7a1d4d}
+.med-contact{display:grid;gap:12px}
+.med-call-row{display:flex;flex-wrap:wrap;gap:10px}
+.med-call-btn{display:inline-flex;align-items:center;gap:6px;min-height:46px;padding:10px 18px;border-radius:999px;background:#1f8f55;color:#fff!important;font-weight:800;font-size:16px;text-decoration:none!important;box-shadow:0 2px 6px rgba(31,143,85,.25)}
+.med-call-btn:hover,.med-call-btn:focus-visible{background:#187446;outline:2px solid #0f5a35;outline-offset:2px}
+@media (max-width:520px){.med-call-btn{flex:1 1 100%;justify-content:center}}

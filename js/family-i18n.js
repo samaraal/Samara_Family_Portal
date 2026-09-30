@@ -1,4 +1,4 @@
-/* Samara Family Portal — English / தமிழ் language switch (v1.0.19)
+/* Samara Family Portal — English / தமிழ் language switch (v1.0.20)
    A display-only layer: it changes the words on screen, never the data sent to the ERP.
    Residents' names, medicine names, IDs, numbers and dates are left exactly as recorded. */
 (function(){
@@ -143,6 +143,7 @@
 "Medication": "மருந்து விவரம்",
 "Current medicines and administration": "நடப்பு மருந்துகளும் வழங்கலும்",
 "Medicine": "மருந்து",
+"No.": "வ.எண்",
 "Strength": "அளவு",
 "Frequency": "எத்தனை முறை",
 "Time": "நேரம்",
