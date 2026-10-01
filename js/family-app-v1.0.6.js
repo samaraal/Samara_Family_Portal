@@ -1,3 +1,22 @@
+// Keep the room's master effective date in the audit record, but show when it
+// applies to this resident. Presentation only: never rewrite financial entries.
+function residentTariffDate(effective,admission){
+  const valid=value=>{const day=String(value||'').slice(0,10);return /^\d{4}-\d{2}-\d{2}$/.test(day)&&!Number.isNaN(Date.parse(day))&&new Date(day).toISOString().slice(0,10)===day?day:'';};
+  const start=valid(effective),admitted=valid(admission);
+  return start&&admitted?(start<admitted?admitted:start):start;
+}
+function residentTariffDescription(row,admission){
+  const text=String(row?.description||'');
+  if(!/^Tariff adjustment for /i.test(text))return text;
+  return text.replace(/\beffective (\d{2})-(\d{2})-(\d{4})\b/i,(match,dd,mm,yyyy)=>{
+    const day=residentTariffDate(`${yyyy}-${mm}-${dd}`,admission);
+    return day?`applicable from ${day.slice(8,10)}-${day.slice(5,7)}-${day.slice(0,4)}`:match;
+  });
+}
+function familyBillingSide(row){
+  const type=String(row?.transaction_type||'').toLowerCase();
+  return ['charge','refund'].includes(type)?'debit':['payment','advance','discount'].includes(type)?'credit':'';
+}
 const FAMILY_PORTAL_VERSION = "1.0.16";
 
 
@@ -485,6 +504,7 @@ function renderDischargeBanner(data,bill){
 }
 function renderDashboard(data){
   if(!data)return;
+  data={...data,billing:(data.billing||[]).map(row=>({...row,description:residentTariffDescription(row,data.patient?.admission_date||familySession?.admission_date)}))};
   latestDashboardData=data;
   const p=data.patient||{}; if(familySession){familySession={...familySession,patient_name:p.patient_name||familySession.patient_name,room_no:p.room_no||familySession.room_no,bed_no:p.bed_no||familySession.bed_no,admission_date:p.admission_date||familySession.admission_date};applyFamilySession(familySession);saveFamilySession();}
   const orders=data.medication_orders||[], mar=data.medication_administrations||[], careOrders=data.care_orders||[], careLogs=data.care_logs||[], vitals=data.vitals||[], billing=data.billing||[];
@@ -499,7 +519,7 @@ function renderDashboard(data){
   const activeCareOrders=careOrders.filter(x=>x.is_active!==false);
   const careMetricValue=activeCareOrders.length?`${completedCare} / ${activeCareOrders.length}`:`${completedCare}`;
   const careMetricNote=careLogs.length?`${careLogs.length} care activit${careLogs.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
-  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
+  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card tariff-discounts"><span>Discounts / Adjustments</span><strong>${money(bill.discounts)}</strong><small>Credits reducing charges</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
   const dischargedNow=renderDischargeBanner(data,bill);
   const cond=document.querySelector('#condition-card');if(cond&&!dischargedNow){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
   const timeline=buildTimeline(data);renderOverviewTimeline();renderIntelligentReport();
@@ -528,9 +548,9 @@ function renderDashboard(data){
   const pp=document.querySelector('#physio-plan');if(pp)pp.innerHTML=plan?`<h3>Current Plan</h3><div class="detail-grid"><div><span>Therapy Type</span><b>${esc(plan.therapy_type||'—')}</b></div><div><span>Frequency</span><b>${esc(plan.frequency||'—')}</b></div><div><span>Preferred Time</span><b>${esc(plan.preferred_time||'—')}</b></div><div><span>Physiotherapist</span><b>${esc(plan.physiotherapist_name||'—')}</b></div></div>`:'<h3>Current Plan</h3><p>No active physiotherapy plan recorded.</p>';
   const pg=document.querySelector('#physio-progress');if(pg)pg.innerHTML=sess?`<h3>Latest Progress Note</h3><p><b>${esc(dateIN(sess.session_date))} · ${esc(sess.status||'Recorded')}</b><br>${esc(sess.notes||'No notes recorded.')}</p>`:'<h3>Latest Progress Note</h3><p>No physiotherapy sessions recorded.</p>';
 
-  const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>ERP ledger</small></article><article class="metric-card"><span>Payments / Advance</span><strong>${money(bill.payments+bill.advances)}</strong><small>Received</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Current balance</small></article>`;
+  const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>After discounts: ${money(bill.charges-bill.discounts)}</small></article><article class="metric-card"><span>Payments / Advance</span><strong>${money(bill.payments+bill.advances)}</strong><small>Received</small></article><article class="metric-card tariff-discounts"><span>Discounts / Adjustments</span><strong>${money(bill.discounts)}</strong><small>Credits reducing charges</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Current balance</small></article>`;
   setFamilyPayButtonState();
-  const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?billing.map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc([x.category,x.description].filter(Boolean).join(' · ')||'Transaction')}</td><td>${String(x.transaction_type).toLowerCase()==='charge'?money(x.amount):'—'}</td><td>${['payment','advance'].includes(String(x.transaction_type).toLowerCase())?money(x.amount):'—'}</td><td>${esc(x.payment_mode||'—')}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
+  const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?billing.map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc([x.transaction_type,x.category,x.description].filter(Boolean).join(' · ')||'Transaction')}</td><td>${familyBillingSide(x)==='debit'?money(x.amount):'—'}</td><td>${familyBillingSide(x)==='credit'?money(x.amount):'—'}</td><td>${esc(x.payment_mode||'—')}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
 
   const docs=data.documents||[]; const dg=document.querySelector('#documents-grid');if(dg)dg.innerHTML=docs.length?docs.map(x=>`<article><span>▤</span><div><b>${esc(x.document_type||'Document')}</b><small>${esc(x.document_name||'File')} · ${esc(dateIN(x.created_at))}</small></div></article>`).join(''):'<article><span>▤</span><div><b>No documents available</b><small>No family-visible document metadata recorded.</small></div></article>';
 }
@@ -546,10 +566,10 @@ function familyLedgerPdf(){
   const rows=sorted.map((x,i)=>{
     const type=String(x.transaction_type||'').toLowerCase();
     const amount=Number(x.amount||0);
-    const isDebit=type==='charge'||type==='refund';
-    const isCredit=type==='payment'||type==='discount'||type==='advance';
+    const isDebit=familyBillingSide(x)==='debit';
+    const isCredit=familyBillingSide(x)==='credit';
     if(isDebit)running+=amount; else if(isCredit)running-=amount;
-    const particulars=[x.category,x.description].filter(Boolean).join(' · ')||x.transaction_type||'Transaction';
+    const particulars=[x.transaction_type,x.category,x.description].filter(Boolean).join(' · ')||x.transaction_type||'Transaction';
     const ref=x.reference_no||x.reference||x.payment_reference||x.bill_number||'—';
     return `<tr><td>${i+1}</td><td>${esc(dateIN(x.transaction_date||x.created_at))}</td><td>${esc(particulars)}</td><td>${esc(ref)}</td><td class="num">${isDebit?money(amount):'—'}</td><td class="num">${isCredit?money(amount):'—'}</td><td class="num">${money(running)}</td></tr>`;
   }).join('');
