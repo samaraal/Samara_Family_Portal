@@ -350,8 +350,8 @@ td{color:#4d3b46}
 #view-billing .billing-metrics .metric-card:nth-child(1) strong{color:#a60755}
 #view-billing .billing-metrics .metric-card:nth-child(2){background:linear-gradient(135deg,#f2fff7,#e8faef);border-color:#bce9cb}
 #view-billing .billing-metrics .metric-card:nth-child(2) strong{color:#078a3e}
-#view-billing .billing-metrics .metric-card:nth-child(3){background:linear-gradient(135deg,#fff8f8,#fff0f1);border-color:#f4c5ca}
-#view-billing .billing-metrics .metric-card:nth-child(3) strong{color:#d41d2f}
+#view-billing .billing-metrics .metric-card:nth-child(4){background:linear-gradient(135deg,#fff8f8,#fff0f1);border-color:#f4c5ca}
+#view-billing .billing-metrics .metric-card:nth-child(4) strong{color:#d41d2f}
 #view-billing .table-card{border-radius:18px;overflow:hidden;box-shadow:0 8px 24px rgba(88,14,48,.06)}
 #view-billing .table-card thead{background:linear-gradient(90deg,#fff0f7,#fff8fb)}
 #view-billing #billing-body tr:first-child td:nth-child(5){color:#078a3e;font-weight:800}
@@ -379,7 +379,7 @@ td{color:#4d3b46}
 #view-billing .billing-metrics .metric-card:after{content:'❧';right:26px;bottom:-28px;font-size:122px;opacity:.10;transform:rotate(-18deg)}
 #view-billing .billing-metrics .metric-card:nth-child(1):before{content:'▤';background:#fbd9e8;color:#a60755}
 #view-billing .billing-metrics .metric-card:nth-child(2):before{content:'▣';background:#d9f6e4;color:#078a3e}
-#view-billing .billing-metrics .metric-card:nth-child(3):before{content:'◔';background:#ffe0e4;color:#d41d2f}
+#view-billing .billing-metrics .metric-card:nth-child(4):before{content:'◔';background:#ffe0e4;color:#d41d2f}
 #view-billing .billing-metrics .metric-card span{font-size:1.05rem;color:#3e3038}
 #view-billing .billing-metrics .metric-card strong{font-size:2.25rem;margin:6px 0 2px}
 #view-billing .billing-metrics .metric-card small{font-size:.98rem;color:#62535b}
@@ -405,3 +405,10 @@ th.med-no,td.med-no{width:52px;text-align:center;font-weight:800;color:#7a1d4d}
 .med-call-btn{display:inline-flex;align-items:center;gap:6px;min-height:46px;padding:10px 18px;border-radius:999px;background:#1f8f55;color:#fff!important;font-weight:800;font-size:16px;text-decoration:none!important;box-shadow:0 2px 6px rgba(31,143,85,.25)}
 .med-call-btn:hover,.med-call-btn:focus-visible{background:#187446;outline:2px solid #0f5a35;outline-offset:2px}
 @media (max-width:520px){.med-call-btn{flex:1 1 100%;justify-content:center}}
+
+/* Four transparent ledger totals: charges, receipts, discounts and balance. */
+#view-billing .billing-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}
+#view-billing .billing-metrics .tariff-discounts{background:#f6efff;border-color:#ddcbed}
+#view-billing .billing-metrics .tariff-discounts strong{color:#75419a}
+#view-billing .billing-metrics .tariff-discounts:before{content:'−';background:#eadcf6;color:#75419a}
+@media(max-width:760px){#view-billing .billing-metrics{grid-template-columns:1fr}}
