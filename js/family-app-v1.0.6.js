@@ -632,6 +632,27 @@ function samaraPrintBar(win,backLabel){
   setTimeout(add,0);
   return win;
 }
+// v1.0.32: same as ERP billAmountInWords (core/08-date-utils.js).
+// Amount in words, Indian system: 1,23,45,678.50 → "Rupees One Crore Twenty Three Lakh Forty Five Thousand Six Hundred Seventy Eight and Fifty Paise Only".
+function billAmountInWords(value){
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const two=n=>n<20?ones[n]:`${tens[Math.floor(n/10)]}${n%10?' '+ones[n%10]:''}`;
+  const three=n=>{const h=Math.floor(n/100),r=n%100;return [h?`${ones[h]} Hundred`:'',r?two(r):''].filter(Boolean).join(' ');};
+  const words=n=>{
+    if(n===0)return 'Zero';
+    const parts=[];const crore=Math.floor(n/10000000);n%=10000000;
+    const lakh=Math.floor(n/100000);n%=100000;const thousand=Math.floor(n/1000);n%=1000;
+    if(crore)parts.push(`${words(crore)} Crore`);
+    if(lakh)parts.push(`${two(lakh)} Lakh`);
+    if(thousand)parts.push(`${two(thousand)} Thousand`);
+    if(n)parts.push(three(n));
+    return parts.join(' ');
+  };
+  const total=Math.round(Math.abs(Number(value)||0)*100);
+  const rupees=Math.floor(total/100),paise=total%100;
+  return `Rupees ${words(rupees)}${paise?` and ${two(paise)} Paise`:''} Only`;
+}
 function familyLedgerPdf(){
   const data=latestDashboardData||{}, p=data.patient||{}, billing=[...(data.billing||[])];
   if(!billing.length){alert('No patient ledger transactions are available to download.');return;}
@@ -660,7 +681,7 @@ function familyLedgerPdf(){
   </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Assisted Living Management System</p><h2>PATIENT ACCOUNT LEDGER</h2><p>Generated on: ${esc(generated)}</p></div></div>
   <div class="meta"><div><b>Patient Name</b> ${esc(patientName)}</div><div><b>Resident ID</b> ${esc(residentId)}</div><div><b>Room / Bed</b> ${esc(room)}</div><div><b>Admission Date</b> ${esc(dateIN(admission))}</div></div>
   <div class="section">Patient Ledger</div><table><thead><tr><th style="width:5%">Sl.</th><th style="width:11%">Date</th><th style="width:35%">Particulars</th><th style="width:12%">Reference</th><th style="width:12%">Debit</th><th style="width:12%">Credit</th><th style="width:13%">Balance</th></tr></thead><tbody>${rows}</tbody></table>
-  <table class="summary"><tr><td>Total Charges</td><td class="num">${money(bill.charges)}</td></tr><tr><td>Payments Received</td><td class="num">${money(bill.payments)}</td></tr><tr><td>Advance Received</td><td class="num">${money(bill.advances)}</td></tr><tr><td>Discounts</td><td class="num">${money(bill.discounts)}</td></tr><tr><td>Refunds</td><td class="num">${money(bill.refunds)}</td></tr><tr><td>OUTSTANDING BALANCE</td><td class="num">${money(bill.outstanding)}</td></tr></table>
+  <table class="summary"><tr><td>Total Charges</td><td class="num">${money(bill.charges)}</td></tr><tr><td>Payments Received</td><td class="num">${money(bill.payments)}</td></tr><tr><td>Advance Received</td><td class="num">${money(bill.advances)}</td></tr><tr><td>Discounts</td><td class="num">${money(bill.discounts)}</td></tr><tr><td>Refunds</td><td class="num">${money(bill.refunds)}</td></tr><tr><td>${bill.outstanding<-0.005?'ADVANCE BALANCE (IN YOUR FAVOUR)':'OUTSTANDING BALANCE'}</td><td class="num">${money(Math.abs(bill.outstanding))}</td></tr><tr><td colspan="2" style="font-weight:normal;font-size:10px"><b>In words:</b> ${esc(billAmountInWords(bill.outstanding))}</td></tr></table>
   <div class="note"><b>Important:</b> This ledger reflects financial transactions recorded in the Samara Care ERP as at ${esc(generated)}.</div><div class="sign"><div>Prepared By</div><div>Accounts / Administrator</div><div>Patient / Attendant</div></div><div class="foot">Samara Health Care LLP · Computer-generated patient ledger · No manual alteration permitted</div><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`;
   const w=samaraPrintBar(window.open('','_blank'));
   if(!w){alert('Please allow pop-ups to download the Patient Ledger PDF.');return;}

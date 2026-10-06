@@ -1,3 +1,7 @@
+## 1.0.32 — Ledger PDF: balance in words
+
+The Ledger PDF summary shows the balance in words (e.g. "Rupees Nine Hundred Thirty Only"); a credit balance is labelled "Advance balance (in your favour)" instead of a minus amount. Same wording as the ERP Final Bill (2.15.81). No SQL.
+
 ## 1.0.31 — Back button on the Ledger PDF page
 
 The Ledger PDF page (opens as a new tab) now has a top bar with "← Back to Portal" and "Print / Save PDF"; hidden when printing. No SQL.
