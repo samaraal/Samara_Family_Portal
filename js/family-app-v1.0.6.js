@@ -36,20 +36,23 @@ function familyParticulars(row){
   if(type==='refund')return 'Refund';
   return parts[0]||cat||'Charge';
 }
-// Same day + same item charges are shown as one line: "Examination Gloves × 7".
+function familyQty(v){const n=Number(v);return Number.isInteger(n)?String(n):String(Math.round(n*100)/100);}
+// Same day + same item (+ same unit price) charges are one line: "Examination Gloves (17 × ₹30)".
+// Without a known quantity: "Hand Sanitizer × 2". Matches the ERP billLineLabel / billItemsSummary.
 function familyBillingLines(rows){
   const out=[],byKey=new Map();
   for(const x of rows||[]){
     const type=String(x?.transaction_type||'').toLowerCase();
     const label=familyParticulars(x);
-    const groupable=type==='charge'&&!x?.auto_generated&&!/^(Room rent|Nursing charge|Special nurse charge)/.test(label);
+    const q=Number(x?.bill_quantity),p=Number(x?.bill_unit_price),unit=q>0&&p>0;
+    const groupable=type==='charge'&&!x?.auto_generated&&!/^(Room rent|Nursing charge|Special nurse charge|Room tariff adjustment)/.test(label);
     const day=activityDateISO(x?.transaction_date||x?.created_at);
-    const key=groupable?`${day}|${x?.category||''}|${label.toLowerCase()}`:null;
-    if(key&&byKey.has(key)){const g=byKey.get(key);g.amount+=Number(x.amount||0);g.count+=1;continue;}
-    const line={...x,amount:Number(x?.amount||0),label,count:1};
+    const key=groupable?`${day}|${x?.category||''}|${label.toLowerCase()}|${unit?p:'-'}`:null;
+    if(key&&byKey.has(key)){const g=byKey.get(key);g.amount+=Number(x.amount||0);g.count+=1;g.qty+=unit?q:0;continue;}
+    const line={...x,amount:Number(x?.amount||0),label,count:1,qty:unit?q:0,unitPrice:unit?p:0};
     out.push(line);if(key)byKey.set(key,line);
   }
-  return out.map(l=>({...l,particulars:l.count>1?`${l.label} × ${l.count}`:l.label}));
+  return out.map(l=>({...l,particulars:l.unitPrice?`${l.label} (${familyQty(l.qty)} × ${familyRupees(l.unitPrice)})`:(l.count>1?`${l.label} × ${l.count}`:l.label)}));
 }
 function familyBillingSide(row){
   const type=String(row?.transaction_type||'').toLowerCase();
@@ -642,8 +645,23 @@ function initFamilyLedgerPdf(){
 // v1.0.24: beverages come from family_portal_beverages (same session check as the dashboard).
 async function withBeverages(data){
   if(!data||!familySession?.session_token||!supabaseClient)return data;
-  try{const {data:rows,error}=await supabaseClient.rpc('family_portal_beverages',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))return {...data,beverages:rows};}catch(error){console.warn('Family beverage records could not be loaded',error);}
-  return data;
+  try{const {data:rows,error}=await supabaseClient.rpc('family_portal_beverages',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))data={...data,beverages:rows};}catch(error){console.warn('Family beverage records could not be loaded',error);}
+  return withBillUnits(data);
+}
+// v1.0.30: quantity × unit price for Bills & Charges items (family_portal_bill_units, SQL 201).
+async function withBillUnits(data){
+  if(!data||!Array.isArray(data.billing)||!data.billing.length||!familySession?.session_token||!supabaseClient)return data;
+  try{
+    const {data:units,error}=await supabaseClient.rpc('family_portal_bill_units',{p_session_token:familySession.session_token});
+    if(error)throw error;if(!Array.isArray(units)||!units.length)return data;
+    const byId=new Map(units.map(u=>[String(u.id),u]));
+    const byKey=new Map(units.map(u=>[`${new Date(u.transaction_date).getTime()}|${Number(u.amount)}`,u]));
+    return {...data,billing:data.billing.map(row=>{
+      if(String(row.transaction_type||'').toLowerCase()!=='charge')return row;
+      const u=(row.id!=null&&byId.get(String(row.id)))||byKey.get(`${new Date(row.transaction_date).getTime()}|${Number(row.amount)}`);
+      return u&&Number(u.quantity)>0?{...row,bill_quantity:Number(u.quantity),bill_unit_price:Number(u.unit_price)}:row;
+    })};
+  }catch(error){console.warn('Bill quantities could not be loaded',error);return data;}
 }
 async function loadDashboard(showStatus=false){
   if(!familySession?.session_token||!supabaseClient)return false;

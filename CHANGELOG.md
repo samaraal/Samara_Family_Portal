@@ -1,3 +1,7 @@
+## 1.0.30 — Units × price on bill lines
+
+Bills & Charges items now show quantity × unit price, e.g. "Examination Gloves (9 × ₹30)" (same day + same item + same price grouped). Items without a recorded quantity keep "Item × N". Needs ERP SQL 201 (family_portal_bill_units); until it is run the portal simply shows the item name. Same wording as the ERP Final Bill and Patient Ledger (ERP 2.15.77).
+
 ## 1.0.29 — Advance counted as Advance
 
 An advance recorded as a Payment with category "Advance" is now counted as Advance Received (Ledger PDF summary), matching the ERP Final Bill (ERP 2.15.76). No SQL.
