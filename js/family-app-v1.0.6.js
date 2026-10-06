@@ -603,6 +603,35 @@ function renderDashboard(data){
 
 
 
+// v1.0.31 (same as ERP 2.15.80): print / PDF windows open as a new tab — on phones there was no way back.
+// Adds a top bar with "← Back to Portal" and "Print / Save PDF" (hidden when printing).
+// Wrap any window.open('','_blank') for a printable page: samaraPrintBar(window.open(...)).
+function samaraPrintBar(win,backLabel){
+  if(!win)return win;
+  const appUrl=window.location.origin+window.location.pathname;
+  let tries=0;
+  const add=()=>{
+    try{
+      if(win.closed)return;
+      const d=win.document;
+      if(d&&d.body&&d.body.childElementCount&&!d.getElementById('samara-print-bar')){
+        const st=d.createElement('style');st.id='samara-print-bar-style';
+        st.textContent='#samara-print-bar{position:sticky;top:0;z-index:2147483647;display:flex;gap:10px;justify-content:space-between;align-items:center;padding:10px 12px;margin:0 0 10px;background:linear-gradient(100deg,#7a1247,#b01264,#e03a7c);box-shadow:0 4px 14px rgba(80,10,40,.25);font-family:Arial,sans-serif}#samara-print-bar button{border:0;border-radius:999px;padding:10px 16px;font-size:15px;font-weight:700;cursor:pointer}#samara-print-bar .sp-back{background:#fff;color:#7a1247}#samara-print-bar .sp-print{background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.6)}@media print{#samara-print-bar{display:none!important}}';
+        const bar=d.createElement('div');bar.id='samara-print-bar';
+        const back=d.createElement('button');back.type='button';back.className='sp-back';back.textContent=backLabel||'\u2190 Back to Portal';
+        const pr=d.createElement('button');pr.type='button';pr.className='sp-print';pr.textContent='Print / Save PDF';
+        back.onclick=()=>{try{win.close()}catch(_){}setTimeout(()=>{try{if(!win.closed)win.location.href=appUrl}catch(_){}},350)};
+        pr.onclick=()=>{try{win.focus();win.print()}catch(_){}};
+        bar.append(back,pr);
+        (d.head||d.body).appendChild(st);
+        d.body.insertBefore(bar,d.body.firstChild);
+      }
+    }catch(_){}
+    if(++tries<40)setTimeout(add,300);
+  };
+  setTimeout(add,0);
+  return win;
+}
 function familyLedgerPdf(){
   const data=latestDashboardData||{}, p=data.patient||{}, billing=[...(data.billing||[])];
   if(!billing.length){alert('No patient ledger transactions are available to download.');return;}
@@ -633,7 +662,7 @@ function familyLedgerPdf(){
   <div class="section">Patient Ledger</div><table><thead><tr><th style="width:5%">Sl.</th><th style="width:11%">Date</th><th style="width:35%">Particulars</th><th style="width:12%">Reference</th><th style="width:12%">Debit</th><th style="width:12%">Credit</th><th style="width:13%">Balance</th></tr></thead><tbody>${rows}</tbody></table>
   <table class="summary"><tr><td>Total Charges</td><td class="num">${money(bill.charges)}</td></tr><tr><td>Payments Received</td><td class="num">${money(bill.payments)}</td></tr><tr><td>Advance Received</td><td class="num">${money(bill.advances)}</td></tr><tr><td>Discounts</td><td class="num">${money(bill.discounts)}</td></tr><tr><td>Refunds</td><td class="num">${money(bill.refunds)}</td></tr><tr><td>OUTSTANDING BALANCE</td><td class="num">${money(bill.outstanding)}</td></tr></table>
   <div class="note"><b>Important:</b> This ledger reflects financial transactions recorded in the Samara Care ERP as at ${esc(generated)}.</div><div class="sign"><div>Prepared By</div><div>Accounts / Administrator</div><div>Patient / Attendant</div></div><div class="foot">Samara Health Care LLP · Computer-generated patient ledger · No manual alteration permitted</div><script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`;
-  const w=window.open('','_blank');
+  const w=samaraPrintBar(window.open('','_blank'));
   if(!w){alert('Please allow pop-ups to download the Patient Ledger PDF.');return;}
   w.document.open();w.document.write(html);w.document.close();
 }

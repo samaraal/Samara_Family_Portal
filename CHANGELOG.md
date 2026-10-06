@@ -1,3 +1,7 @@
+## 1.0.31 — Back button on the Ledger PDF page
+
+The Ledger PDF page (opens as a new tab) now has a top bar with "← Back to Portal" and "Print / Save PDF"; hidden when printing. No SQL.
+
 ## 1.0.30 — Units × price on bill lines
 
 Bills & Charges items now show quantity × unit price, e.g. "Examination Gloves (9 × ₹30)" (same day + same item + same price grouped). Items without a recorded quantity keep "Item × N". Needs ERP SQL 201 (family_portal_bill_units); until it is run the portal simply shows the item name. Same wording as the ERP Final Bill and Patient Ledger (ERP 2.15.77).
