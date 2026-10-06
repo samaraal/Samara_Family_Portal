@@ -14,6 +14,7 @@ function residentTariffDescription(row,admission){
   });
 }
 // v1.0.28: family-friendly bill lines — item name only, no internal Accounts notes.
+// KEEP IN STEP WITH the ERP (src/app/core/08-date-utils.js billLineLabel / billIsAdvance).
 function familyRupees(v){const n=Number(v);return Number.isFinite(n)?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):String(v);}
 function familyParticulars(row){
   const type=String(row?.transaction_type||'').toLowerCase();
@@ -236,7 +237,7 @@ function medStatusFor(order, mar){
 }
 // v1.0.27: one Outstanding / Advance Balance card for Overview and Billing.
 function balanceCardHTML(bill,extraClass,dueNote){const o=Number(bill?.outstanding||0);if(o< -0.005)return `<article class="metric-card ${extraClass} balance-credit"><span>Advance Balance</span><strong>${money(Math.abs(o))}</strong><small>In your favour · nothing due</small></article>`;if(Math.abs(o)<0.01)return `<article class="metric-card ${extraClass} balance-clear"><span>Outstanding</span><strong>${money(0)}</strong><small>All bills settled</small></article>`;return `<article class="metric-card ${extraClass} balance-due"><span>Outstanding</span><strong>${money(o)}</strong><small>${dueNote}</small></article>`;}
-function billingSummary(rows){let charges=0,payments=0,advances=0,discounts=0,refunds=0;for(const x of rows){const a=Number(x.amount||0);const t=String(x.transaction_type||'').toLowerCase();if(t==='charge')charges+=a;else if(t==='payment')payments+=a;else if(t==='advance')advances+=a;else if(t==='discount')discounts+=a;else if(t==='refund')refunds+=a;}return{charges,payments,advances,discounts,refunds,outstanding:charges-payments-advances-discounts+refunds};}
+function billingSummary(rows){let charges=0,payments=0,advances=0,discounts=0,refunds=0;for(const x of rows){const a=Number(x.amount||0);const t=String(x.transaction_type||'').toLowerCase();if(t==='charge')charges+=a;else if(t==='advance'||(t==='payment'&&/advance/i.test(String(x.category||''))))advances+=a;else if(t==='payment')payments+=a;else if(t==='discount')discounts+=a;else if(t==='refund')refunds+=a;}return{charges,payments,advances,discounts,refunds,outstanding:charges-payments-advances-discounts+refunds};}
 
 
 function setFamilyPayButtonState(){

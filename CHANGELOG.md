@@ -1,3 +1,7 @@
+## 1.0.29 — Advance counted as Advance
+
+An advance recorded as a Payment with category "Advance" is now counted as Advance Received (Ledger PDF summary), matching the ERP Final Bill (ERP 2.15.76). No SQL.
+
 ## 1.0.28 — Simple bill lines for families
 
 - Billing table and Ledger PDF show only the item name (e.g. "Examination Gloves"). Accounts names, "Admin-fixed tariff", approval remarks and internal discount notes are no longer shown to families.
