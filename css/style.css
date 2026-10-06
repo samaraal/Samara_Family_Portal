@@ -412,3 +412,30 @@ th.med-no,td.med-no{width:52px;text-align:center;font-weight:800;color:#7a1d4d}
 #view-billing .billing-metrics .tariff-discounts strong{color:#75419a}
 #view-billing .billing-metrics .tariff-discounts:before{content:'−';background:#eadcf6;color:#75419a}
 @media(max-width:760px){#view-billing .billing-metrics{grid-template-columns:1fr}}
+
+/* v1.0.27 — Overview dashboard cards in the same colourful style as Billing */
+#overview-metrics{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px}
+#overview-metrics .metric-card{position:relative;overflow:hidden;min-height:150px;border-radius:22px;padding:26px 22px 22px 104px;display:flex;flex-direction:column;justify-content:center;box-shadow:0 10px 28px rgba(88,14,48,.06)}
+#overview-metrics .metric-card:before{position:absolute;left:22px;top:50%;transform:translateY(-50%);width:64px;height:64px;border-radius:50%;display:grid;place-items:center;font-size:30px;font-weight:900}
+#overview-metrics .metric-card:after{content:'❧';position:absolute;right:18px;bottom:-26px;font-size:110px;opacity:.10;transform:rotate(-18deg);pointer-events:none}
+#overview-metrics .metric-card span{font-size:1rem;color:#3e3038}
+#overview-metrics .metric-card strong{font-size:2rem;margin:6px 0 2px;line-height:1.1}
+#overview-metrics .metric-card small{font-size:.9rem;color:#62535b}
+#overview-metrics .ov-medicines{background:linear-gradient(135deg,#fff8fc,#fff0f7);border-color:#f3c5da}
+#overview-metrics .ov-medicines strong,#overview-metrics .ov-medicines:after{color:#a60755}
+#overview-metrics .ov-medicines:before{content:'✚';background:#fbd9e8;color:#a60755}
+#overview-metrics .ov-care{background:linear-gradient(135deg,#fffaf2,#fff3e2);border-color:#f3dcb4}
+#overview-metrics .ov-care strong,#overview-metrics .ov-care:after{color:#b8650a}
+#overview-metrics .ov-care:before{content:'♥';background:#fde7c4;color:#b8650a}
+#overview-metrics .ov-vitals{background:linear-gradient(135deg,#f4f9ff,#eaf3ff);border-color:#c5dbf4}
+#overview-metrics .ov-vitals strong,#overview-metrics .ov-vitals:after{color:#1d5fae}
+#overview-metrics .ov-vitals:before{content:'♡';background:#d9e9fb;color:#1d5fae}
+#overview-metrics .ov-balance,#overview-metrics .balance-due{background:linear-gradient(135deg,#fff8f8,#fff0f1);border-color:#f4c5ca}
+#overview-metrics .ov-balance strong,#overview-metrics .ov-balance:after{color:#d41d2f}
+#overview-metrics .ov-balance:before{content:'◔';background:#ffe0e4;color:#d41d2f}
+/* Advance balance / settled: green on both Overview and Billing */
+#overview-metrics .balance-credit,#overview-metrics .balance-clear,#view-billing .billing-metrics .balance-credit,#view-billing .billing-metrics .balance-clear{background:linear-gradient(135deg,#f2fff7,#e8faef)!important;border-color:#bce9cb!important}
+#overview-metrics .balance-credit strong,#overview-metrics .balance-clear strong,#overview-metrics .balance-credit:after,#overview-metrics .balance-clear:after,#view-billing .billing-metrics .balance-credit strong,#view-billing .billing-metrics .balance-clear strong{color:#078a3e!important}
+#overview-metrics .balance-credit:before,#overview-metrics .balance-clear:before,#view-billing .billing-metrics .balance-credit:before,#view-billing .billing-metrics .balance-clear:before{content:'✓'!important;background:#d9f6e4!important;color:#078a3e!important}
+@media(max-width:1280px){#overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){#overview-metrics{grid-template-columns:1fr;gap:14px}#overview-metrics .metric-card{min-height:118px;padding:20px 18px 18px 92px}#overview-metrics .metric-card:before{left:18px;width:56px;height:56px;font-size:26px}#overview-metrics .metric-card strong{font-size:1.8rem}}

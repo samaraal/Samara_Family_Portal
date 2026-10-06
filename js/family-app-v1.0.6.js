@@ -169,7 +169,7 @@ function isToday(value){if(!value)return false;const d=new Date(value);return !N
 
 function clearStaticDemo(){
   const cond=document.querySelector('#condition-card'); if(cond)cond.innerHTML='<span>Current Condition</span><strong>Loading…</strong><small>Reading latest ERP information</small>';
-  const metrics=document.querySelector('#overview-metrics'); if(metrics)metrics.innerHTML='<article class="metric-card"><span>Medicines Today</span><strong>—</strong><small>Loading live data</small></article><article class="metric-card"><span>Daily Care</span><strong>—</strong><small>Loading live data</small></article><article class="metric-card"><span>Latest Vitals</span><strong>—</strong><small>Loading live data</small></article><article class="metric-card"><span>Outstanding</span><strong>—</strong><small>Loading live data</small></article>';
+  const metrics=document.querySelector('#overview-metrics'); if(metrics)metrics.innerHTML='<article class="metric-card ov-medicines"><span>Medicines Today</span><strong>—</strong><small>Loading live data</small></article><article class="metric-card ov-care"><span>Daily Care</span><strong>—</strong><small>Loading live data</small></article><article class="metric-card ov-vitals"><span>Latest BP</span><strong>—</strong><small>Loading live data</small></article><article class="metric-card ov-balance"><span>Outstanding</span><strong>—</strong><small>Loading live data</small></article>';
   const timeline=document.querySelector('#overview-timeline'); if(timeline)timeline.innerHTML='<div class="pending"><span>—</span><p><b>Loading current care information…</b><small>Please wait</small></p></div>';
   const update=document.querySelector('#latest-update'); if(update)update.innerHTML='<div><b>Loading latest update…</b><small>Reading ERP records</small></div>';
   ['care-body','medicines-body','vitals-body','billing-body'].forEach(id=>{const el=document.getElementById(id);if(el)el.innerHTML='<tr><td colspan="8">Loading live ERP data…</td></tr>';});
@@ -197,6 +197,8 @@ function medStatusFor(order, mar){
   const given=logs.filter(x=>['given','administered','completed'].includes(String(x.status||'').toLowerCase())).length;
   return `${given}/${logs.length} recorded`;
 }
+// v1.0.27: one Outstanding / Advance Balance card for Overview and Billing.
+function balanceCardHTML(bill,extraClass,dueNote){const o=Number(bill?.outstanding||0);if(o< -0.005)return `<article class="metric-card ${extraClass} balance-credit"><span>Advance Balance</span><strong>${money(Math.abs(o))}</strong><small>In your favour · nothing due</small></article>`;if(Math.abs(o)<0.01)return `<article class="metric-card ${extraClass} balance-clear"><span>Outstanding</span><strong>${money(0)}</strong><small>All bills settled</small></article>`;return `<article class="metric-card ${extraClass} balance-due"><span>Outstanding</span><strong>${money(o)}</strong><small>${dueNote}</small></article>`;}
 function billingSummary(rows){let charges=0,payments=0,advances=0,discounts=0,refunds=0;for(const x of rows){const a=Number(x.amount||0);const t=String(x.transaction_type||'').toLowerCase();if(t==='charge')charges+=a;else if(t==='payment')payments+=a;else if(t==='advance')advances+=a;else if(t==='discount')discounts+=a;else if(t==='refund')refunds+=a;}return{charges,payments,advances,discounts,refunds,outstanding:charges-payments-advances-discounts+refunds};}
 
 
@@ -498,8 +500,8 @@ function renderDischargeBanner(data,bill){
   if(cond){cond.innerHTML=`<span>Final Bill Amount</span><strong>${money(finalAmount)}</strong><small>Amount Paid&nbsp;&nbsp;: &nbsp;${money(paid)}<br>Outstanding&nbsp;&nbsp;: &nbsp;${money(outstanding)}</small>`;}
   const latest=document.querySelector('#latest-update')?.closest('.panel');
   if(latest&&!thanks){thanks=document.createElement('div');thanks.id='discharge-thankyou';thanks.className='discharge-thankyou';thanks.innerHTML='<span>♥</span><em>Thank you for trusting us with<br>your loved one’s care.</em><small>COMPASSION • COMFORT • DIGNITY</small>';latest.appendChild(thanks);}
-  const metricCards=document.querySelectorAll('#overview-metrics .metric-card');
-  if(metricCards[3]) metricCards[3].querySelector('small').textContent=settled?'All bills settled':'Payment pending';
+  const balanceCard=document.querySelector('#overview-metrics .ov-balance');
+  if(balanceCard&&outstanding>0.005) balanceCard.querySelector('small').textContent='Payment pending';
   return true;
 }
 function renderDashboard(data){
@@ -511,15 +513,18 @@ function renderDashboard(data){
   const today=todayISO();
   const activeOrders=orders.filter(x=>x.is_active!==false && (!x.start_date||x.start_date<=today) && (!x.end_date||x.end_date>=today));
   const scheduled=activeOrders.reduce((n,x)=>n+(Array.isArray(x.scheduled_times)?x.scheduled_times.length:0),0);
-  const given=mar.filter(x=>['given','administered','completed'].includes(String(x.status||'').toLowerCase())).length;
-  const completedCare=careLogs.filter(x=>String(x.status||'').toLowerCase()==='completed').length;
+  // v1.0.27: count only today's doses and care (was counting every day loaded).
+  const marToday=mar.filter(x=>activityDateISO(x.administered_at||x.created_at)===today);
+  const careLogsToday=careLogs.filter(x=>activityDateISO(x.completed_at||x.recorded_at||x.created_at)===today);
+  const given=marToday.filter(x=>['given','administered','completed'].includes(String(x.status||'').toLowerCase())).length;
+  const completedCare=careLogsToday.filter(x=>String(x.status||'').toLowerCase()==='completed').length;
   const latest=vitals[0]||{}; const bill=billingSummary(billing);
   const bp=(latest.systolic!=null||latest.diastolic!=null)?`${latest.systolic??'—'}/${latest.diastolic??'—'}`:'—/—';
   const vitalSmall=latest.recorded_at?`${latest.blood_sugar!=null?`${latest.blood_sugar_type||'Sugar'} ${latest.blood_sugar} · `:''}Recorded ${timeIN(latest.recorded_at)}`:'No vital signs recorded';
   const activeCareOrders=careOrders.filter(x=>x.is_active!==false);
   const careMetricValue=activeCareOrders.length?`${completedCare} / ${activeCareOrders.length}`:`${completedCare}`;
-  const careMetricNote=careLogs.length?`${careLogs.length} care activit${careLogs.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
-  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article><article class="metric-card tariff-discounts"><span>Discounts / Adjustments</span><strong>${money(bill.discounts)}</strong><small>Credits reducing charges</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Based on ERP ledger</small></article>`;
+  const careMetricNote=careLogsToday.length?`${careLogsToday.length} care activit${careLogsToday.length===1?'y':'ies'} recorded today`:(activeCareOrders.length?'No care activity recorded today':'No care plan or activity recorded');
+  const metrics=document.querySelector('#overview-metrics');if(metrics)metrics.innerHTML=`<article class="metric-card ov-medicines"><span>Medicines Today</span><strong>${given} / ${scheduled||activeOrders.length}</strong><small>${activeOrders.length?`${activeOrders.length} active medicine order${activeOrders.length===1?'':'s'}`:'No active medicine orders'}</small></article><article class="metric-card ov-care"><span>Daily Care</span><strong>${careMetricValue}</strong><small>${careMetricNote}</small></article><article class="metric-card ov-vitals"><span>Latest BP</span><strong>${esc(bp)}</strong><small>${esc(vitalSmall)}</small></article>${balanceCardHTML(bill,'ov-balance','Based on ERP ledger')}`;
   const dischargedNow=renderDischargeBanner(data,bill);
   const cond=document.querySelector('#condition-card');if(cond&&!dischargedNow){const level=String(latest.alert_level||'').toLowerCase();const condition=!vitals.length?'No recent vitals':(['critical','high','abnormal'].some(x=>level.includes(x))?'Requires review':'Stable');cond.innerHTML=`<span>Current Condition</span><strong>${esc(condition)}</strong><small>${latest.recorded_at?`Last vitals ${dateTimeIN(latest.recorded_at)}`:'No recent vital-sign entry'}</small>`;}
   const timeline=buildTimeline(data);renderOverviewTimeline();renderIntelligentReport();
@@ -548,7 +553,7 @@ function renderDashboard(data){
   const pp=document.querySelector('#physio-plan');if(pp)pp.innerHTML=plan?`<h3>Current Plan</h3><div class="detail-grid"><div><span>Therapy Type</span><b>${esc(plan.therapy_type||'—')}</b></div><div><span>Frequency</span><b>${esc(plan.frequency||'—')}</b></div><div><span>Preferred Time</span><b>${esc(plan.preferred_time||'—')}</b></div><div><span>Physiotherapist</span><b>${esc(plan.physiotherapist_name||'—')}</b></div></div>`:'<h3>Current Plan</h3><p>No active physiotherapy plan recorded.</p>';
   const pg=document.querySelector('#physio-progress');if(pg)pg.innerHTML=sess?`<h3>Latest Progress Note</h3><p><b>${esc(dateIN(sess.session_date))} · ${esc(sess.status||'Recorded')}</b><br>${esc(sess.notes||'No notes recorded.')}</p>`:'<h3>Latest Progress Note</h3><p>No physiotherapy sessions recorded.</p>';
 
-  const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>After discounts: ${money(bill.charges-bill.discounts)}</small></article><article class="metric-card"><span>Payments / Advance</span><strong>${money(bill.payments+bill.advances)}</strong><small>Received</small></article><article class="metric-card tariff-discounts"><span>Discounts / Adjustments</span><strong>${money(bill.discounts)}</strong><small>Credits reducing charges</small></article><article class="metric-card"><span>Outstanding</span><strong>${money(bill.outstanding)}</strong><small>Current balance</small></article>`;
+  const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>After discounts: ${money(bill.charges-bill.discounts)}</small></article><article class="metric-card"><span>Payments / Advance</span><strong>${money(bill.payments+bill.advances)}</strong><small>Received</small></article><article class="metric-card tariff-discounts"><span>Discounts / Adjustments</span><strong>${money(bill.discounts)}</strong><small>Credits reducing charges</small></article>${balanceCardHTML(bill,'bill-balance','Current balance')}`;
   setFamilyPayButtonState();
   const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?billing.map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc([x.transaction_type,x.category,x.description].filter(Boolean).join(' · ')||'Transaction')}</td><td>${familyBillingSide(x)==='debit'?money(x.amount):'—'}</td><td>${familyBillingSide(x)==='credit'?money(x.amount):'—'}</td><td>${esc(x.payment_mode||'—')}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
 
