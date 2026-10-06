@@ -13,6 +13,43 @@ function residentTariffDescription(row,admission){
     return day?`applicable from ${day.slice(8,10)}-${day.slice(5,7)}-${day.slice(0,4)}`:match;
   });
 }
+// v1.0.28: family-friendly bill lines — item name only, no internal Accounts notes.
+function familyRupees(v){const n=Number(v);return Number.isFinite(n)?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):String(v);}
+function familyParticulars(row){
+  const type=String(row?.transaction_type||'').toLowerCase();
+  const cat=String(row?.category||'').trim();
+  const text=String(row?.description||'').trim();
+  const parts=text.split(' · ').map(x=>x.trim()).filter(Boolean);
+  let m=text.match(/^(?:Automatic )?room rent for (\d{2}-\d{2}-\d{4})(?: \(([^)]*)\))?(?: · Room ([^ ·]+))?/i);
+  if(m){const room=m[3]||((m[2]||'').match(/Room ([^ ,)]+)/i)||[])[1];return `Room rent · ${m[1]}${room?` · Room ${room}`:''}`;}
+  m=text.match(/^(?:Automatic )?(daily )?(special )?nurs\w* charge for (\d{2}-\d{2}-\d{4})/i);
+  if(m)return `${m[2]?'Special nurse':'Nursing'} charge · ${m[3]}`;
+  m=text.match(/^Tariff adjustment for (\d{2}-\d{2}-\d{4}) · Room (\S+)(?: · [^·]*)? · ([\d.]+) → ([\d.]+)/i);
+  if(m)return `Room tariff adjustment · ${m[1]} · Room ${m[2]} (${familyRupees(m[3])} → ${familyRupees(m[4])} per day)`;
+  if(type==='payment'||type==='advance'){
+    const ref=(text.match(/Reference:\s*([^·]+)/i)||[])[1];
+    const label=(type==='advance'||/advance/i.test(cat))?'Advance received':'Payment received';
+    return ref?`${label} · Ref ${ref.trim()}`:label;
+  }
+  if(type==='discount')return cat?`Discount · ${cat}`:'Discount';
+  if(type==='refund')return 'Refund';
+  return parts[0]||cat||'Charge';
+}
+// Same day + same item charges are shown as one line: "Examination Gloves × 7".
+function familyBillingLines(rows){
+  const out=[],byKey=new Map();
+  for(const x of rows||[]){
+    const type=String(x?.transaction_type||'').toLowerCase();
+    const label=familyParticulars(x);
+    const groupable=type==='charge'&&!x?.auto_generated&&!/^(Room rent|Nursing charge|Special nurse charge)/.test(label);
+    const day=activityDateISO(x?.transaction_date||x?.created_at);
+    const key=groupable?`${day}|${x?.category||''}|${label.toLowerCase()}`:null;
+    if(key&&byKey.has(key)){const g=byKey.get(key);g.amount+=Number(x.amount||0);g.count+=1;continue;}
+    const line={...x,amount:Number(x?.amount||0),label,count:1};
+    out.push(line);if(key)byKey.set(key,line);
+  }
+  return out.map(l=>({...l,particulars:l.count>1?`${l.label} × ${l.count}`:l.label}));
+}
 function familyBillingSide(row){
   const type=String(row?.transaction_type||'').toLowerCase();
   return ['charge','refund'].includes(type)?'debit':['payment','advance','discount'].includes(type)?'credit':'';
@@ -161,7 +198,7 @@ let intelligentReportDate = todayISO();
 const esc = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const money = value => `₹${Number(value || 0).toLocaleString('en-IN',{maximumFractionDigits:2})}`;
 function initials(name){return String(name||'Family Member').trim().split(/\s+/).slice(0,2).map(x=>x[0]?.toUpperCase()||'').join('')||'FM';}
-function dateIN(value){if(!value)return '—';const d=new Date(value.length===10?`${value}T00:00:00`:value);return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'});}
+function dateIN(value){if(!value)return '—';const d=new Date(value.length===10?`${value}T00:00:00`:value);return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric'}).replace(/\//g,'-');}
 function timeIN(value){if(!value)return '—';const d=new Date(value);return Number.isNaN(d.getTime())?'—':d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',hour12:true});}
 function dateTimeIN(value){if(!value)return '—';return `${dateIN(value)} ${timeIN(value)}`;}
 function todayISO(){const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
@@ -555,7 +592,7 @@ function renderDashboard(data){
 
   const bm=document.querySelector('#billing-metrics');if(bm)bm.innerHTML=`<article class="metric-card"><span>Total Charges</span><strong>${money(bill.charges)}</strong><small>After discounts: ${money(bill.charges-bill.discounts)}</small></article><article class="metric-card"><span>Payments / Advance</span><strong>${money(bill.payments+bill.advances)}</strong><small>Received</small></article><article class="metric-card tariff-discounts"><span>Discounts / Adjustments</span><strong>${money(bill.discounts)}</strong><small>Credits reducing charges</small></article>${balanceCardHTML(bill,'bill-balance','Current balance')}`;
   setFamilyPayButtonState();
-  const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?billing.map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc([x.transaction_type,x.category,x.description].filter(Boolean).join(' · ')||'Transaction')}</td><td>${familyBillingSide(x)==='debit'?money(x.amount):'—'}</td><td>${familyBillingSide(x)==='credit'?money(x.amount):'—'}</td><td>${esc(x.payment_mode||'—')}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
+  const bb=document.querySelector('#billing-body');if(bb)bb.innerHTML=billing.length?familyBillingLines(billing).map(x=>`<tr><td>${esc(dateIN(x.transaction_date))}</td><td>—</td><td>${esc(x.particulars)}</td><td>${familyBillingSide(x)==='debit'?money(x.amount):'—'}</td><td>${familyBillingSide(x)==='credit'?money(x.amount):'—'}</td><td>${familyBillingSide(x)==='credit'&&x.payment_mode&&!/not applicable/i.test(x.payment_mode)?esc(x.payment_mode):'—'}</td></tr>`).join(''):emptyRow(6,'No billing transactions recorded.');
 
   const docs=data.documents||[]; const dg=document.querySelector('#documents-grid');if(dg)dg.innerHTML=docs.length?docs.map(x=>`<article><span>▤</span><div><b>${esc(x.document_type||'Document')}</b><small>${esc(x.document_name||'File')} · ${esc(dateIN(x.created_at))}</small></div></article>`).join(''):'<article><span>▤</span><div><b>No documents available</b><small>No family-visible document metadata recorded.</small></div></article>';
 }
@@ -568,13 +605,13 @@ function familyLedgerPdf(){
   const bill=billingSummary(billing);
   const sorted=billing.slice().sort((a,b)=>new Date(a.transaction_date||a.created_at||0)-new Date(b.transaction_date||b.created_at||0));
   let running=0;
-  const rows=sorted.map((x,i)=>{
+  const rows=familyBillingLines(sorted).map((x,i)=>{
     const type=String(x.transaction_type||'').toLowerCase();
     const amount=Number(x.amount||0);
     const isDebit=familyBillingSide(x)==='debit';
     const isCredit=familyBillingSide(x)==='credit';
     if(isDebit)running+=amount; else if(isCredit)running-=amount;
-    const particulars=[x.transaction_type,x.category,x.description].filter(Boolean).join(' · ')||x.transaction_type||'Transaction';
+    const particulars=x.particulars||'Transaction';
     const ref=x.reference_no||x.reference||x.payment_reference||x.bill_number||'—';
     return `<tr><td>${i+1}</td><td>${esc(dateIN(x.transaction_date||x.created_at))}</td><td>${esc(particulars)}</td><td>${esc(ref)}</td><td class="num">${isDebit?money(amount):'—'}</td><td class="num">${isCredit?money(amount):'—'}</td><td class="num">${money(running)}</td></tr>`;
   }).join('');

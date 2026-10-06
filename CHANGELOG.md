@@ -1,3 +1,11 @@
+## 1.0.28 — Simple bill lines for families
+
+- Billing table and Ledger PDF show only the item name (e.g. "Examination Gloves"). Accounts names, "Admin-fixed tariff", approval remarks and internal discount notes are no longer shown to families.
+- Same-day charges for the same item are grouped into one line with the total, e.g. "Examination Gloves × 7 — ₹510".
+- Room rent shows as "Room rent · 06-10-2026 · Room 109-B"; tariff discounts as "Room tariff adjustment · date · Room (₹3,200 → ₹2,500 per day)"; payments as "Advance received · Ref …".
+- Last column renamed Mode: shows Cash / UPI etc. for payments only (no more "Not applicable").
+- All Family Portal dates now DD-MM-YYYY. No SQL.
+
 ## 1.0.27 — Colourful Overview dashboard
 
 - Overview cards now use the same colourful style as Billing: Medicines Today (pink), Daily Care (amber), Latest BP (blue), Outstanding (red), each with its own icon. 4 across on desktop, 2 on tablets, 1 on phones.
