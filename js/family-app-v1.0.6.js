@@ -450,6 +450,9 @@ function buildTimeline(data){
   (data.meals||data.meal_records||[]).forEach(x=>push('food',x.served_at||x.recorded_at||x.created_at||(x.meal_date?`${x.meal_date}T12:00:00`:null),`Food & Diet: ${String(x.meal_type||x.item_type||'Meal').replace(/^Tiffin$/i,'Breakfast')} — ${x.consumption_status||x.status||'Recorded'}`,[x.menu||x.item_name,x.quantity,x.remarks].filter(Boolean).join(' · '),x.consumption_status||x.status||''));
   // v1.0.24: beverage servings (Tea, Coffee, Milk, Boost, Horlicks, Fresh Juice) under Food & Diet.
   (data.beverages||[]).forEach(x=>{const name=x.beverage==='Fresh Juice'&&x.juice_name?`Fresh Juice (${x.juice_name})`:(x.beverage||'Beverage');const quantity=x.quantity??x.quantity_ml;const qty=quantity!=null&&quantity!==''?`${Number(quantity)} ${x.quantity_unit||'ml'}`:'';push('food',x.given_at||(x.given_date?`${x.given_date}T${String(x.given_time||'12:00').slice(0,5)}:00+05:30`:null),`Food & Diet: Beverage — ${name} — ${x.consumption_status||'Recorded'}`,[qty,x.remarks].filter(Boolean).join(' · '),x.consumption_status||'')});
+  // v1.0.34: one simple fluid line per chart day (7 AM to 7 AM) for Guests on the nurses' Intake / Output chart (ERP SQL 211).
+  (data.fluid_balance||[]).forEach(x=>{if(!x.chart_date)return;const done=!!x.complete;
+    push('food',done?`${x.chart_date}T23:59:00+05:30`:new Date().toISOString(),`Fluid intake ${Math.round(Number(x.intake_ml||0))} ml, output ${Math.round(Number(x.output_ml||0))} ml`,done?'7 AM to 7 AM':'So far today (since 7 AM)','Recorded');});
   const nursing=[...(data.nursing_procedures||[]),...(data.nursing_procedure_logs||[]),...(data.procedure_logs||[])];
   nursing.forEach(x=>push('nursing',x.completed_at||x.performed_at||x.recorded_at||x.created_at,`Nursing Procedure: ${x.procedure_name||x.procedure_type||x.nursing_procedure||x.name||'Procedure'} — ${x.status||'Recorded'}`,[x.details||x.notes||x.remarks,x.duration?`Duration ${x.duration}`:''].filter(Boolean).join(' · '),x.status||''));
   (data.daily_moments||data.moments||[]).forEach(x=>push('moments',x.created_at||x.recorded_at,'Daily Moment',x.caption||'A moment shared by Samara'));
@@ -702,6 +705,7 @@ function initFamilyLedgerPdf(){
 async function withBeverages(data){
   if(!data||!familySession?.session_token||!supabaseClient)return data;
   try{const {data:rows,error}=await supabaseClient.rpc('family_portal_beverages',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))data={...data,beverages:rows};}catch(error){console.warn('Family beverage records could not be loaded',error);}
+  try{const {data:rows,error}=await supabaseClient.rpc('family_portal_fluid_balance',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))data={...data,fluid_balance:rows};}catch(error){/* needs ERP SQL 211 */}
   return withMedicineNotes(await withBillUnits(data));
 }
 // v1.0.33: a dose WITHHELD by the nurse is never shown raw. It appears only after the doctor's instruction is recorded,

@@ -1,3 +1,8 @@
+## 1.0.34 — Fluid intake / output in simple words
+
+- Activity timeline (Food & Diet) shows one line per day for Guests on the nurses' Intake / Output chart: "Fluid intake X ml, output Y ml" (7 AM to 7 AM; "so far today" for the current day).
+- Needs ERP 2.16.11 SQL 211 (family_portal_fluid_balance). Before SQL 211 is run, nothing changes.
+
 ## 1.0.33 — Medicine held by the nurse: shown in simple words
 
 - A medicine dose that the nurse **held** (e.g. low BP before a BP tablet) is no longer shown as a raw "Withheld" entry.
