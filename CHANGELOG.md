@@ -1,3 +1,10 @@
+## 1.0.33 — Medicine held by the nurse: shown in simple words
+
+- A medicine dose that the nurse **held** (e.g. low BP before a BP tablet) is no longer shown as a raw "Withheld" entry.
+- It appears only **after the doctor's instruction is recorded**, as one simple line under Medicines, e.g. "Medicine: Amlodipine 5 mg — Held (doctor informed) · Held because the blood pressure was low (BP 90/58 mmHg). Dr. Kumar was informed and advised to give it at 12:00 PM."
+- No staff names or internal remarks; nothing is shown while the doctor's instruction is still pending. Admin preview shows the same.
+- Needs ERP **SQL 210** (family_portal_medicine_notes). Until it is run, held doses are simply hidden.
+
 ## 1.0.32 — Ledger PDF: balance in words
 
 The Ledger PDF summary shows the balance in words (e.g. "Rupees Nine Hundred Thirty Only"); a credit balance is labelled "Advance balance (in your favour)" instead of a minus amount. Same wording as the ERP Final Bill (2.15.81). No SQL.

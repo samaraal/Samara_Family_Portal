@@ -439,6 +439,12 @@ function buildTimeline(data){
     const note=[scheduled?`Scheduled ${scheduled}`:'',x.remarks||''].filter(Boolean).join(' · ');
     push('medicines',x.administered_at||x.created_at,`Medicine: ${medicineDetails||'Medicine details unavailable'} — ${status}`,note,status);
   });
+  // v1.0.33: withheld dose, explained in simple words (only after the doctor's instruction)
+  (data.medicine_notes||[]).forEach(x=>{
+    const name=String(x.medicine_name||'').trim(),strength=String(x.strength||'').trim();
+    const details=[name,strength&&!name.toLowerCase().includes(strength.toLowerCase())?strength:''].filter(Boolean).join(' ');
+    push('medicines',x.held_at||(x.scheduled_date?`${x.scheduled_date}T${String(x.scheduled_time||'12:00').slice(0,5)}:00+05:30`:null),`Medicine: ${details||'Medicine'} — Held (doctor informed)`,[x.scheduled_time?`Scheduled ${x.scheduled_time}`:'',x.family_text||''].filter(Boolean).join(' · '),'Held');
+  });
   (data.vitals||[]).forEach(x=>{const bits=[];if(x.systolic!=null||x.diastolic!=null)bits.push(`BP ${x.systolic??'—'}/${x.diastolic??'—'}`);if(x.pulse!=null)bits.push(`Pulse ${x.pulse}`);if(x.spo2!=null)bits.push(`SpO₂ ${x.spo2}%`);if(x.temperature!=null)bits.push(`Temp ${x.temperature}`);if(x.blood_sugar!=null)bits.push(`${x.blood_sugar_type||'Sugar'} ${x.blood_sugar}`);push('vitals',x.recorded_at,'Vitals recorded',bits.join(' · ')||x.remarks||'Observation recorded');});
   (data.physio_sessions||[]).forEach(x=>push('physiotherapy',x.session_at||x.completed_at||x.created_at||x.session_date,`Physiotherapy: ${x.therapy_type||x.session_type||'Session'} — ${x.status||'Recorded'}`,x.notes||x.physiotherapist_name||'',x.status||''));
   (data.meals||data.meal_records||[]).forEach(x=>push('food',x.served_at||x.recorded_at||x.created_at||(x.meal_date?`${x.meal_date}T12:00:00`:null),`Food & Diet: ${String(x.meal_type||x.item_type||'Meal').replace(/^Tiffin$/i,'Breakfast')} — ${x.consumption_status||x.status||'Recorded'}`,[x.menu||x.item_name,x.quantity,x.remarks].filter(Boolean).join(' · '),x.consumption_status||x.status||''));
@@ -696,7 +702,38 @@ function initFamilyLedgerPdf(){
 async function withBeverages(data){
   if(!data||!familySession?.session_token||!supabaseClient)return data;
   try{const {data:rows,error}=await supabaseClient.rpc('family_portal_beverages',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))data={...data,beverages:rows};}catch(error){console.warn('Family beverage records could not be loaded',error);}
-  return withBillUnits(data);
+  return withMedicineNotes(await withBillUnits(data));
+}
+// v1.0.33: a dose WITHHELD by the nurse is never shown raw. It appears only after the doctor's instruction is recorded,
+// as one simple line from family_portal_medicine_notes (ERP 2.16.10, SQL 210), e.g. "Held because the blood pressure
+// was low (BP 90/58 mmHg). Dr. Kumar was informed and advised to give it at 12:00 PM."
+// Admin preview has no family session: build the same lines locally from the ERP rows (same wording as SQL 210).
+function familyHeldText(x){
+  const r=String(x.withhold_reason||'');
+  const reasons={'Low blood pressure':'Held because the blood pressure was low','Low blood sugar':'Held because the blood sugar was low','Low pulse / heart rate':'Held because the pulse was low','Drowsy / unwell':'Held because the Guest was drowsy / unwell','Nil by mouth (NPO)':'Held because nothing was to be given by mouth at that time','Vomiting / cannot swallow':'Held because of vomiting / difficulty in swallowing'};
+  const reading=['Low blood pressure','Low blood sugar','Low pulse / heart rate'].includes(r)&&String(x.withhold_reading||'').trim()?` (${String(x.withhold_reading).trim()})`:'';
+  const d=String(x.doctor_informed_name||'').trim(),doctor=!d?'The treating doctor':/^dr(\.|\s)/i.test(d)?d:`Dr. ${d}`;
+  const m=String(x.rescheduled_time||'').match(/^(\d{1,2}):(\d{2})/),t=m?`${((Number(m[1])+11)%12)+1}:${m[2]} ${Number(m[1])<12?'AM':'PM'}`:'';
+  const ins=String(x.doctor_instruction||'');
+  const advice=ins==='Give now'||ins==='Give at a later time'?` was informed and advised to give it${t?` at ${t}`:(ins==='Give now'?' then':' later')}`:ins==='Skip this dose'?' was informed and advised to skip this dose':' was informed and reviewed the prescription';
+  return `${reasons[r]||'Held for a clinical reason'}${reading}. ${doctor}${advice}.`;
+}
+function previewMedicineNotes(data){
+  const all=data.medication_administrations||[];
+  const orders=new Map((data.medication_orders||[]).map(o=>[String(o.id),o]));
+  const notes=all.filter(x=>String(x.status||'').toLowerCase()==='withheld'&&x.doctor_instruction).map(x=>{const o=orders.get(String(x.order_id))||{};return {id:x.id,medicine_name:x.medicine_name||o.medicine_name,strength:o.strength||o.dose,scheduled_date:x.scheduled_date,scheduled_time:String(x.scheduled_time||'').slice(0,5),held_at:x.administered_at||x.entry_recorded_at,family_text:familyHeldText(x)}});
+  return {...data,medication_administrations:all.filter(x=>String(x.status||'').toLowerCase()!=='withheld'),medicine_notes:notes};
+}
+async function withMedicineNotes(data){
+  if(!data)return data;
+  const mar=(data.medication_administrations||[]).filter(x=>String(x.status||'').toLowerCase()!=='withheld');
+  data={...data,medication_administrations:mar,medicine_notes:[]};
+  if(!familySession?.session_token||!supabaseClient)return data;
+  try{
+    const {data:notes,error}=await supabaseClient.rpc('family_portal_medicine_notes',{p_session_token:familySession.session_token});
+    if(error)throw error;if(Array.isArray(notes))data.medicine_notes=notes;
+  }catch(error){console.warn('Medicine notes could not be loaded',error);}
+  return data;
 }
 // v1.0.30: quantity × unit price for Bills & Charges items (family_portal_bill_units, SQL 201).
 async function withBillUnits(data){
@@ -768,7 +805,7 @@ function enableAdminFamilyPreview(previewId){
     const d=event.data||{};if(d.type!=='SAMARA_FAMILY_ADMIN_PREVIEW_DATA'||d.preview_id!==previewId)return;
     window.removeEventListener('message',receive);
     const session={...(d.session||{}),session_token:'ADMIN-PREVIEW-NO-FAMILY-SESSION'};
-    openPortal(session);renderDashboard(d.dashboard||{});renderAdminPreviewMoments(d.dashboard?.daily_moments||[]);
+    openPortal(session);renderDashboard(previewMedicineNotes(d.dashboard||{}));renderAdminPreviewMoments(d.dashboard?.daily_moments||[]);
     const note=document.querySelector('#resident-contact');if(note)note.textContent=`Admin preview · Viewing as ${session.relative_name||'authorised family member'} · No family login or Last Login update`;
   };
   window.addEventListener('message',receive);
