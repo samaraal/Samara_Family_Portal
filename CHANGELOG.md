@@ -1,3 +1,7 @@
+## 1.0.40 — Outside bills with the original bill
+
+Billing now lists the outside bills Samara paid for the Guest (outside pharmacy, lab, scan, ambulance / taxi, hospital) with the actual bill amount, the handling charge, and a **View Bill** button that opens the original bill photo / PDF. Bills the family paid directly are shown as "Paid by family — not charged". Only verified bills of the family's own Guest are shown; no staff names. Matches ERP 2.17.5. Requires ERP SQL 247.
+
 ## 1.0.39 — Clean item names on bills
 
 Internal remarks typed into a charge description (e.g. "admission …", "user-authorised consolidation; correction recorded …") are no longer shown to families; real item details such as "Suction Catheter - 14 Fr" stay. Matches ERP 2.17.4. No database change.

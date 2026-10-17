@@ -1,5 +1,5 @@
-// Family Portal v1.0.39
-const CACHE = 'samara-family-portal-1.0.39-clean-items';
+// Family Portal v1.0.40
+const CACHE = 'samara-family-portal-1.0.40-outside-bills';
 const SHELL = [
   './', './index.html', './styles.css?v=2.8.77', './app.js?v=2.8.77',
   './bootstrap-error.js?v=2.8.40', './health-check.js?v=2.8.40',

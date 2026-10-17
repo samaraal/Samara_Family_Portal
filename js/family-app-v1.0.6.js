@@ -809,6 +809,24 @@ async function withBillUnits(data){
     })};
   }catch(error){console.warn('Bill quantities could not be loaded',error);return data;}
 }
+// v1.0.40 (ERP 2.17.5, SQL 247): outside bills Samara paid for the Guest, with the original bill (View Bill).
+// family_portal_outside_bills returns only this family's own Guest, verified bills only, no staff names.
+async function loadOutsideBills(){
+  const card=document.querySelector('#outside-bills-card'),body=document.querySelector('#outside-bills-body');
+  if(!card||!body||!familySession?.session_token||!supabaseClient)return;
+  try{
+    const {data,error}=await supabaseClient.rpc('family_portal_outside_bills',{p_session_token:familySession.session_token});
+    if(error)throw error;
+    const rows=Array.isArray(data)?data:[];
+    if(!rows.length){card.style.display='none';body.innerHTML='';return;}
+    body.innerHTML=rows.map(r=>{
+      const files=Array.isArray(r.files)?r.files:[];
+      const view=files.length?files.map((f,i)=>`<a style="display:inline-block;padding:7px 14px;margin:2px 0;border-radius:999px;background:#b01264;color:#fff;font-weight:700;text-decoration:none;white-space:nowrap" href="${esc(f.url)}" target="_blank" rel="noopener noreferrer">View Bill${files.length>1?' '+(i+1):''}</a>`).join(' '):'<small>Bill being prepared</small>';
+      return `<tr><td>${esc(dateIN(r.date))}</td><td>${esc(r.item||'Outside service')}${r.family_paid?'<br><small>Paid by family — not charged</small>':''}</td><td>${esc(r.provider||'—')}</td><td>${money(r.bill_amount)}</td><td>${r.family_paid?'—':money(r.handling_fee)}</td><td>${view}</td></tr>`;
+    }).join('');
+    card.style.display='';
+  }catch(error){console.warn('Outside bills could not be loaded',error);card.style.display='none';}
+}
 async function loadDashboard(showStatus=false){
   if(!familySession?.session_token||!supabaseClient)return false;
   const btn=document.querySelector('#refresh-button');const old=btn?.textContent;if(btn&&showStatus)btn.textContent='Refreshing…';
@@ -816,7 +834,7 @@ async function loadDashboard(showStatus=false){
     const {data,error}=await supabaseClient.rpc('family_portal_dashboard',{p_session_token:familySession.session_token});
     if(error)throw error; if(!data)throw new Error('Family Portal session expired or access disabled.');
     const base=await enrichDischargeSummary(data); const withUnits=await withBillUnits(base); const enriched=await withBeverages(withUnits);
-    renderDashboard(enriched); loadDailyMoments(); if(btn&&showStatus)btn.textContent='✓ Updated'; setTimeout(()=>{if(btn)btn.textContent=old||'↻ Refresh';},1200); return true;
+    renderDashboard(enriched); loadDailyMoments(); loadOutsideBills(); if(btn&&showStatus)btn.textContent='✓ Updated'; setTimeout(()=>{if(btn)btn.textContent=old||'↻ Refresh';},1200); return true;
   }catch(err){console.error('Family dashboard load failed',err);if(btn)btn.textContent=old||'↻ Refresh';return false;}
 }
 function saveFamilySession(){
