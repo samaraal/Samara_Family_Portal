@@ -1,3 +1,7 @@
+## 1.0.38 — Room rent shows only the final rate
+
+When a room tariff is revised (e.g. a double room converted to single occupancy), each day's room / nursing charge is shown at the final rate only — the old rate and the separate "Room tariff adjustment" lines are no longer shown. Totals and balance are unchanged; ledger entries are not altered. Matches ERP 2.17.3. No database change required.
+
 ## 1.0.37 — Billing lines show quantity and unit price
 
 Family billing groups same-item charges using approved quantities and unit prices when available, making each billed amount easier to understand. No database change required.
