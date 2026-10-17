@@ -1,3 +1,7 @@
+## 1.0.37 — Billing lines show quantity and unit price
+
+Family billing groups same-item charges using approved quantities and unit prices when available, making each billed amount easier to understand. No database change required.
+
 ## 1.0.36 — Centre code (MOG) compulsory in the Guest ID
 
 - The centre code must be typed (MOG for Mogappair), so future centres stay distinct. Typing only the numbers (e.g. 202610008) now shows "Please start the Guest ID with the centre code, e.g. MOG." — the portal no longer assumes MOG.

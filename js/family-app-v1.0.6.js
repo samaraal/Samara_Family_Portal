@@ -763,7 +763,7 @@ async function loadDashboard(showStatus=false){
   try{
     const {data,error}=await supabaseClient.rpc('family_portal_dashboard',{p_session_token:familySession.session_token});
     if(error)throw error; if(!data)throw new Error('Family Portal session expired or access disabled.');
-    const enriched=await withBeverages(await enrichDischargeSummary(data));
+    const base=await enrichDischargeSummary(data); const withUnits=await withBillUnits(base); const enriched=await withBeverages(withUnits);
     renderDashboard(enriched); loadDailyMoments(); if(btn&&showStatus)btn.textContent='✓ Updated'; setTimeout(()=>{if(btn)btn.textContent=old||'↻ Refresh';},1200); return true;
   }catch(err){console.error('Family dashboard load failed',err);if(btn)btn.textContent=old||'↻ Refresh';return false;}
 }
@@ -893,7 +893,7 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
     try{await supabaseClient.rpc('record_family_portal_login_event',{p_session_token:familySession.session_token,p_access_id:familySession.access_id,p_user_agent:navigator.userAgent||null});}catch(auditError){console.warn('Family Portal login audit unavailable',auditError);}
     if(await firstLoginRequired()){status.textContent='';showFirstLoginChange();return;}
     const {data:dashboard,error:dashError}=await supabaseClient.rpc('family_portal_dashboard',{p_session_token:familySession.session_token});if(dashError)throw dashError;if(!dashboard)throw new Error('Unable to read the resident record.');
-    openPortal(familySession);renderDashboard(await withBeverages(dashboard));status.textContent='';
+    openPortal(familySession);const withUnits=await withBillUnits(dashboard); renderDashboard(await withBeverages(withUnits));status.textContent='';
   }catch(err){console.error(err);status.textContent='Unable to load the resident information. Please contact Samara if the problem continues.';}finally{submit.disabled=false;}
 });
 document.querySelector('#signout-button')?.addEventListener('click',closePortal);
