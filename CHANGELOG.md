@@ -1,3 +1,7 @@
+## 1.0.39 — Clean item names on bills
+
+Internal remarks typed into a charge description (e.g. "admission …", "user-authorised consolidation; correction recorded …") are no longer shown to families; real item details such as "Suction Catheter - 14 Fr" stay. Matches ERP 2.17.4. No database change.
+
 ## 1.0.38 — Room rent shows only the final rate
 
 When a room tariff is revised (e.g. a double room converted to single occupancy), each day's room / nursing charge is shown at the final rate only — the old rate and the separate "Room tariff adjustment" lines are no longer shown. Totals and balance are unchanged; ledger entries are not altered. Matches ERP 2.17.3. No database change required.

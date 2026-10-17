@@ -16,6 +16,15 @@ function residentTariffDescription(row,admission){
 // v1.0.28: family-friendly bill lines — item name only, no internal Accounts notes.
 // KEEP IN STEP WITH the ERP (src/app/core/08-date-utils.js billLineLabel / billIsAdvance).
 function familyRupees(v){const n=Number(v);return Number.isFinite(n)?'₹'+n.toLocaleString('en-IN',{maximumFractionDigits:2}):String(v);}
+// v1.0.39 (ERP 2.17.4), KEEP IN STEP WITH ERP billCleanItemName: item name for bills — drops internal remarks typed into a description
+// ("admission 13-10-2026", "user-authorised consolidation; correction recorded 2026-10-16 18:26…",
+// "100 Nos x Rs15") but keeps real item details such as "Suction Catheter - 14 Fr".
+function familyCleanItemName(text){
+  const internal=/admission\s*\d|consolidat|correct(ion|ed)|authori[sz]|recorded|approv|verified|remark|reason|\d{4}-\d{2}-\d{2}|\d{1,2}:\d{2}|^\d+(\.\d+)?\s*(nos?\.?|pcs|pieces|units?|qty)\s*[x×*]\s*(rs\.?|₹)/i;
+  const segs=String(text||'').split(/\s+-\s+/).map(x=>x.trim()).filter(Boolean);
+  const kept=segs.filter((seg,i)=>i===0||!internal.test(seg));
+  return kept.join(' - ');
+}
 function familyParticulars(row){
   const type=String(row?.transaction_type||'').toLowerCase();
   const cat=String(row?.category||'').trim();
@@ -34,7 +43,7 @@ function familyParticulars(row){
   }
   if(type==='discount')return cat?`Discount · ${cat}`:'Discount';
   if(type==='refund')return 'Refund';
-  return parts[0]||cat||'Charge';
+  return familyCleanItemName(parts[0])||cat||'Charge';
 }
 function familyQty(v){const n=Number(v);return Number.isInteger(n)?String(n):String(Math.round(n*100)/100);}
 // Same day + same item (+ same unit price) charges are one line: "Examination Gloves (17 × ₹30)".
