@@ -1,3 +1,7 @@
+## 1.0.43 — Procedure plan times in clock order
+
+Today's planned Nursing Procedure times are listed in clock order (6:00 AM, 7:00 AM … 10:00 PM), the same as the ERP 2.18.32. No database change.
+
 ## 1.0.42 — Nursing Procedures shown to families
 
 The **Nursing Procedures** category (Overview "Care Timeline", Activity timeline, Intelligent Report) now shows procedures done for the Guest: planned procedures recorded by the nurses (with their scheduled time, e.g. "Scheduled 1:00 PM") and procedures started through Approval Requests. Before, this category was always empty. Planned procedures no longer appear under Care. With "Nursing Procedures" selected on the Overview, today's plan is listed too ("Plan · 7:00 AM, 1:00 PM · done today 1 of 3"), and Daily Care lists each planned procedure with today's progress. No codes, rates or staff names. Admin Preview from the ERP shows the same. Requires ERP SQL 251, 252, 253 (installed) and ERP 2.18.28 for Admin Preview.
