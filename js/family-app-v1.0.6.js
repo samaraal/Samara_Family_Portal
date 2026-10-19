@@ -732,7 +732,7 @@ function applyNursingProcedures(data,np){
 function nursingPlanToday(data){
   const today=todayISO(),plan=data?.nursing_procedure_plan||[],recs=(data?.nursing_procedures||[]).filter(r=>activityDateISO(r.completed_at)===today);
   const t12=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);if(!m)return '';const hh=Number(m[1]);return `${hh%12||12}:${m[2]} ${hh>=12?'PM':'AM'}`;};
-  const key=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?((Number(m[1])+17)%24)*60+Number(m[2]):9999;};
+  const key=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?Number(m[1])*60+Number(m[2]):9999;}; // v1.0.43: clock order, same as the ERP
   return plan.map(p=>{const times=[...new Set((p.scheduled_times||[]).map(t=>String(t).slice(0,5)))].sort((a,b)=>key(a)-key(b));
     const done=recs.filter(r=>r.procedure_name===p.procedure_name);
     return {name:p.procedure_name||'Nursing procedure',times,timesText:times.length?times.map(t12).join(', '):(p.frequency?`${p.frequency} · ${p.shift||''}`.trim():'As planned'),
