@@ -493,7 +493,8 @@ function renderOverviewTimeline(){
   const host=document.querySelector('#overview-timeline');if(!host)return;
   const today=todayISO();
   const rows=buildTimeline(latestDashboardData||{}).filter(x=>activityDateISO(x.at)===today&&(overviewTimelineCategory==='all'||x.category===overviewTimelineCategory));
-  host.innerHTML=rows.length?rows.slice(0,6).map(x=>`<div class="done"><span>${esc(timeIN(x.at))}</span><p><b>${esc(x.title)}</b><small>${esc(x.note||'')}</small></p></div>`).join(''):'<div class="pending"><span>—</span><p><b>No records in this category today</b><small>Choose another category or View all for date-wise history.</small></p></div>';
+  const planRows=overviewTimelineCategory==='nursing'?nursingPlanToday(latestDashboardData||{}).map(p=>`<div class="pending"><span>Plan</span><p><b>Nursing Procedure: ${esc(p.name)}</b><small>${esc(p.timesText)}${p.total?` · done today ${p.doneCount} of ${p.total}`:''}</small></p></div>`).join(''):'';
+  host.innerHTML=rows.length||planRows?rows.slice(0,6).map(x=>`<div class="done"><span>${esc(timeIN(x.at))}</span><p><b>${esc(x.title)}</b><small>${esc(x.note||'')}</small></p></div>`).join('')+planRows:'<div class="pending"><span>—</span><p><b>No records in this category today</b><small>Choose another category or View all for date-wise history.</small></p></div>';
   document.querySelectorAll('#overview-activity-filters [data-overview-category]').forEach(b=>b.classList.toggle('active',b.dataset.overviewCategory===overviewTimelineCategory));
 }
 function initOverviewActivityFilters(){
@@ -603,6 +604,8 @@ function renderDashboard(data){
     activeCareOrders.filter(order=>!careLogs.some(log=>log.care_order_id===order.id)).forEach(order=>{
       careRows.push(`<tr><td>${esc(order.care_type||'Care')}</td><td>${esc(order.shift||'—')}</td><td><span class="status pending">Pending</span></td><td>—</td><td>${esc(order.instruction||'—')}</td></tr>`);
     });
+    nursingPlanToday(data).forEach(p=>{const st=p.total?(p.doneCount>=p.total?'Completed':`${p.doneCount} of ${p.total} done`):(p.doneCount?'Completed':'Planned');
+      careRows.push(`<tr><td>Nursing procedure: ${esc(p.name)}</td><td>${esc(p.timesText)}</td><td><span class="status ${st==='Completed'?'done':'pending'}">${esc(st)}</span></td><td>—</td><td>${esc(p.instruction||'—')}</td></tr>`);});
     cb.innerHTML=careRows.length?careRows.join(''):emptyRow(5,'No daily care plan or activity has been recorded for this resident.');
   }
   const mb=document.querySelector('#medicines-body');if(mb)mb.innerHTML=activeOrders.length?activeOrders.map((o,i)=>`<tr><td class="med-no">${i+1}</td><td>${esc(o.medicine_name||'—')}</td><td>${esc(o.strength||'—')}</td><td>${esc(o.frequency||'—')}</td><td>${esc((o.scheduled_times||[]).join(', ')||'—')}</td><td>${esc(o.food_instruction||'—')}</td><td><span class="status">${esc(medStatusFor(o,mar))}</span></td></tr>`).join(''):emptyRow(7,'No active medicine orders.');
@@ -712,12 +715,41 @@ function initFamilyLedgerPdf(){
   document.querySelector('#family-ledger-pdf')?.addEventListener('click',familyLedgerPdf);
 }
 
+// v1.0.42: Nursing Procedures. Planned procedures (ERP 2.18.26+) and their records move out of Care into
+// "Nursing Procedures"; procedures started through Approval Requests are shown too. No codes, rates or staff names.
+// np = {proc_order_ids, plan, records} from family_portal_nursing_procedures (or the ERP Admin Preview, same shape).
+function applyNursingProcedures(data,np){
+  if(!data||!np||typeof np!=='object'||!Array.isArray(np.records))return data;
+  const ids=new Set((np.proc_order_ids||[]).map(String));
+  const t12=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);if(!m)return '';const hh=Number(m[1]);return `${hh%12||12}:${m[2]} ${hh>=12?'PM':'AM'}`;};
+  return {...data,
+    care_orders:(data.care_orders||[]).filter(o=>!ids.has(String(o.id))),
+    care_logs:(data.care_logs||[]).filter(l=>!ids.has(String(l.care_order_id))),
+    nursing_procedure_plan:Array.isArray(np.plan)?np.plan:[],
+    nursing_procedures:np.records.map(r=>({...r,details:[r.scheduled_time?`Scheduled ${t12(r.scheduled_time)}`:'',r.details||''].filter(Boolean).join(' · ')}))};
+}
+// v1.0.42: today's planned procedure times (family view) — "Planned · 1:00 PM", or done when recorded.
+function nursingPlanToday(data){
+  const today=todayISO(),plan=data?.nursing_procedure_plan||[],recs=(data?.nursing_procedures||[]).filter(r=>activityDateISO(r.completed_at)===today);
+  const t12=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);if(!m)return '';const hh=Number(m[1]);return `${hh%12||12}:${m[2]} ${hh>=12?'PM':'AM'}`;};
+  const key=v=>{const m=String(v||'').match(/^(\d{1,2}):(\d{2})/);return m?((Number(m[1])+17)%24)*60+Number(m[2]):9999;};
+  return plan.map(p=>{const times=[...new Set((p.scheduled_times||[]).map(t=>String(t).slice(0,5)))].sort((a,b)=>key(a)-key(b));
+    const done=recs.filter(r=>r.procedure_name===p.procedure_name);
+    return {name:p.procedure_name||'Nursing procedure',times,timesText:times.length?times.map(t12).join(', '):(p.frequency?`${p.frequency} · ${p.shift||''}`.trim():'As planned'),
+      doneCount:done.length,total:times.length||null,instruction:p.instruction||''};});
+}
 // v1.0.24: beverages come from family_portal_beverages (same session check as the dashboard).
 async function withBeverages(data){
   if(!data||!familySession?.session_token||!supabaseClient)return data;
   try{const {data:rows,error}=await supabaseClient.rpc('family_portal_beverages',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))data={...data,beverages:rows};}catch(error){console.warn('Family beverage records could not be loaded',error);}
   try{const {data:rows,error}=await supabaseClient.rpc('family_portal_fluid_balance',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))data={...data,fluid_balance:rows};}catch(error){/* needs ERP SQL 211 */}
   try{const {data:rows,error}=await supabaseClient.rpc('family_portal_tube_feeds',{p_session_token:familySession.session_token});if(error)throw error;if(Array.isArray(rows))data={...data,tube_feeds:rows};}catch(error){console.warn('Family tube-feed records could not be loaded',error);}
+  // v1.0.42: Nursing Procedures (ERP 2.18.28, SQL 253) — see applyNursingProcedures.
+  try{
+    const {data:np,error}=await supabaseClient.rpc('family_portal_nursing_procedures',{p_session_token:familySession.session_token});
+    if(error)throw error;
+    data=applyNursingProcedures(data,np);
+  }catch(error){console.warn('Family nursing procedures could not be loaded',error);}
   return withMedicineNotes(await withBillUnits(data));
 }
 // v1.0.33: a dose WITHHELD by the nurse is never shown raw. It appears only after the doctor's instruction is recorded,
@@ -882,7 +914,7 @@ function enableAdminFamilyPreview(previewId){
     const d=event.data||{};if(d.type!=='SAMARA_FAMILY_ADMIN_PREVIEW_DATA'||d.preview_id!==previewId)return;
     window.removeEventListener('message',receive);
     const session={...(d.session||{}),session_token:'ADMIN-PREVIEW-NO-FAMILY-SESSION'};
-    openPortal(session);renderDashboard(previewMedicineNotes(d.dashboard||{}));renderAdminPreviewMoments(d.dashboard?.daily_moments||[]);
+    openPortal(session);renderDashboard(previewMedicineNotes(applyNursingProcedures(d.dashboard||{},d.dashboard?.nursing_procedures_payload)));renderAdminPreviewMoments(d.dashboard?.daily_moments||[]);
     const note=document.querySelector('#resident-contact');if(note)note.textContent=`Admin preview · Viewing as ${session.relative_name||'authorised family member'} · No family login or Last Login update`;
   };
   window.addEventListener('message',receive);

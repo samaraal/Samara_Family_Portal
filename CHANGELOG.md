@@ -1,3 +1,7 @@
+## 1.0.42 — Nursing Procedures shown to families
+
+The **Nursing Procedures** category (Overview "Care Timeline", Activity timeline, Intelligent Report) now shows procedures done for the Guest: planned procedures recorded by the nurses (with their scheduled time, e.g. "Scheduled 1:00 PM") and procedures started through Approval Requests. Before, this category was always empty. Planned procedures no longer appear under Care. With "Nursing Procedures" selected on the Overview, today's plan is listed too ("Plan · 7:00 AM, 1:00 PM · done today 1 of 3"), and Daily Care lists each planned procedure with today's progress. No codes, rates or staff names. Admin Preview from the ERP shows the same. Requires ERP SQL 251, 252, 253 (installed) and ERP 2.18.28 for Admin Preview.
+
 ## 1.0.40 — Outside bills with the original bill
 
 Billing now lists the outside bills Samara paid for the Guest (outside pharmacy, lab, scan, ambulance / taxi, hospital) with the actual bill amount, the handling charge, and a **View Bill** button that opens the original bill photo / PDF. Bills the family paid directly are shown as "Paid by family — not charged". Only verified bills of the family's own Guest are shown; no staff names. Matches ERP 2.17.5. Requires ERP SQL 247.
