@@ -117,6 +117,7 @@
 "No administration recorded today": "இன்று மருந்து வழங்கல் பதிவு இல்லை",
 "No active medicine orders": "நடப்பு மருந்து ஆணைகள் இல்லை",
 "No vital signs recorded": "உடல்நிலைக் குறியீடுகள் பதிவு இல்லை",
+"No BP recorded yet": "இதுவரை BP பதிவு இல்லை",
 "No care activity recorded today": "இன்று பராமரிப்புச் செயல்பாடு பதிவு இல்லை",
 "No care plan or activity recorded": "பராமரிப்புத் திட்டம் அல்லது செயல்பாடு பதிவு இல்லை",
 "Last vitals": "கடைசி உடல்நிலைக் குறியீடுகள்",
@@ -439,6 +440,7 @@
   var PATTERNS=[
     [/^(Pulse|Temp|Temperature|Sugar|Blood Sugar|Blood Pressure|BP|Duration|Amount|Balance) ([^·—–]+)$/,function(m){return (DICT[m[1]]||m[1])+' '+m[2];}],
     [/^(\d+) care activit(?:y|ies) recorded today$/,function(m){return 'இன்று '+m[1]+' பராமரிப்புச் செயல்பாடுகள் பதிவாகியுள்ளன';}],
+    [/^mmHg · Recorded (.+)$/,function(m){return 'mmHg · '+m[1]+' பதிவு';}],
     [/^(\d+) active medicine orders?$/,function(m){return m[1]+' நடப்பு மருந்து ஆணைகள்';}],
     [/^Available for (\d+) more days?$/,function(m){return 'இன்னும் '+m[1]+' நாட்கள் கிடைக்கும்';}],
     [/^(\d+) records?$/,function(m){return m[1]+' பதிவுகள்';}],

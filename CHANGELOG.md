@@ -1,3 +1,9 @@
+## 1.0.44 — Overview boxes open their pages; Latest BP fixed
+
+All Overview dashboard boxes are now clickable (tap, click or Enter): **Medicines Today** → Medicines, **Daily Care** → Daily Care, **Latest BP** → Vitals, **Outstanding / Advance Balance** → Billing, and the **Current Condition** box → Vitals. The boxes lift slightly on hover and show a › arrow.
+
+**Latest BP** now shows the most recent entry that actually has a BP reading. Before, when the last vitals entry was sugar-only (e.g. RBS 320), the box showed "—/—" with the RBS value. Sugar is no longer shown in the BP box (it stays on the Vitals page); the date is shown when the BP reading is not from today. Admin Preview shows the same. No database change.
+
 ## 1.0.43 — Procedure plan times in clock order
 
 Today's planned Nursing Procedure times are listed in clock order (6:00 AM, 7:00 AM … 10:00 PM), the same as the ERP 2.18.32. No database change.

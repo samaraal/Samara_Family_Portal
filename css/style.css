@@ -439,3 +439,10 @@ th.med-no,td.med-no{width:52px;text-align:center;font-weight:800;color:#7a1d4d}
 #overview-metrics .balance-credit:before,#overview-metrics .balance-clear:before,#view-billing .billing-metrics .balance-credit:before,#view-billing .billing-metrics .balance-clear:before{content:'✓'!important;background:#d9f6e4!important;color:#078a3e!important}
 @media(max-width:1280px){#overview-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:600px){#overview-metrics{grid-template-columns:1fr;gap:14px}#overview-metrics .metric-card{min-height:118px;padding:20px 18px 18px 92px}#overview-metrics .metric-card:before{left:18px;width:56px;height:56px;font-size:26px}#overview-metrics .metric-card strong{font-size:1.8rem}}
+
+/* v1.0.44: Overview dashboard boxes open their pages */
+#overview-metrics [data-open-card],#condition-card[data-open-card]{cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+#overview-metrics [data-open-card]:hover{transform:translateY(-3px);box-shadow:0 16px 34px rgba(84,18,52,.14)}
+#condition-card[data-open-card]:hover{opacity:.92}
+#overview-metrics [data-open-card]:focus-visible,#condition-card[data-open-card]:focus-visible{outline:3px solid #c2185b;outline-offset:3px}
+#overview-metrics [data-open-card] small:after{content:' ›';font-weight:800}
