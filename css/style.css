@@ -453,3 +453,17 @@ th.med-no,td.med-no{width:52px;text-align:center;font-weight:800;color:#7a1d4d}
 .header-actions .nav-step-btn:focus-visible{outline:3px solid #c2185b;outline-offset:2px}
 body.on-home-view .header-actions .nav-step-btn{display:none}
 @media (max-width:760px){.header-actions .nav-step-btn{display:inline-block;padding:7px 10px;font-size:.82rem}.header-actions{gap:6px}.portal-header h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.portal-header>div:not(.header-actions){min-width:0}}
+
+/* v1.0.46: Vitals boxes — Samara pink gradient (same as the nurse screensaver) and navigable */
+.vital-grid .vital-box{background:linear-gradient(120deg,#fff6fa 0%,#fde3ee 55%,#f8c9dc 100%);border:2px solid #f0b3cd;border-radius:22px;box-shadow:0 4px 14px rgba(122,18,71,.08);cursor:pointer;transition:transform .15s ease,box-shadow .15s ease}
+.vital-grid .vital-box span{color:#7a1247}
+.vital-grid .vital-box strong{color:#5d1039}
+.vital-grid .vital-box small{color:#b01264}
+.vital-grid .vital-box small:after{content:' ›';font-weight:800}
+.vital-grid .vital-box:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(122,18,71,.16)}
+.vital-grid .vital-box.active{background:linear-gradient(145deg,#fff2f8 0%,#fcd6e6 50%,#f6aecd 100%);border-color:#b01264;box-shadow:0 0 0 3px rgba(176,18,100,.18),0 14px 30px rgba(122,18,71,.16)}
+.vital-grid .vital-box:focus-visible{outline:3px solid #c2185b;outline-offset:3px}
+.vitals-filter-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 12px;padding:12px 16px;border-radius:16px;background:linear-gradient(120deg,#fff6fa 0%,#fde3ee 55%,#f8c9dc 100%);border:1px solid #f0b3cd;color:#5d1039}
+.vitals-filter-bar[hidden]{display:none}
+.vitals-filter-bar button{background:#b01264;color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer}
+#vitals-table .vital-col-focus{background:#fde3ee;color:#5d1039;font-weight:800}

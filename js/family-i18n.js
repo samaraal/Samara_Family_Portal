@@ -120,6 +120,8 @@
 "No active medicine orders": "நடப்பு மருந்து ஆணைகள் இல்லை",
 "No vital signs recorded": "உடல்நிலைக் குறியீடுகள் பதிவு இல்லை",
 "No BP recorded yet": "இதுவரை BP பதிவு இல்லை",
+"Show all vitals": "அனைத்து உடல்நிலைக் குறியீடுகளும்",
+"Not recorded yet": "இன்னும் பதிவு இல்லை",
 "No care activity recorded today": "இன்று பராமரிப்புச் செயல்பாடு பதிவு இல்லை",
 "No care plan or activity recorded": "பராமரிப்புத் திட்டம் அல்லது செயல்பாடு பதிவு இல்லை",
 "Last vitals": "கடைசி உடல்நிலைக் குறியீடுகள்",

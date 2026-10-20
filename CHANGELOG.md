@@ -1,3 +1,9 @@
+## 1.0.46 — Vitals boxes navigable, Samara pink gradient
+
+The Vitals page boxes (Blood Pressure, Pulse, SpO₂, Blood Sugar) now have the Samara pink gradient used on the nurse screensaver. Tapping a box shows only that reading's history in the table below (the column is highlighted, with a "Show all vitals" button); tapping it again shows everything.
+
+Each box now shows the latest entry that actually has that reading, with its date / time. Before, when the last entry was sugar-only (e.g. RBS 320), Pulse and SpO₂ showed "—". The history table gets a **Sugar** column (e.g. "RBS 320"), which was missing. No database change.
+
 ## 1.0.45 — Back and Home buttons
 
 Every page except Overview now has **← Back** (returns to the previous page) and **⌂ Home** (returns to Overview) at the top. The phone's own Back button also steps back through the pages instead of leaving the portal. Tamil: "பின்செல்" / "முகப்பு". No database change.

@@ -615,8 +615,9 @@ function renderDashboard(data){
   }
   const mb=document.querySelector('#medicines-body');if(mb)mb.innerHTML=activeOrders.length?activeOrders.map((o,i)=>`<tr><td class="med-no">${i+1}</td><td>${esc(o.medicine_name||'—')}</td><td>${esc(o.strength||'—')}</td><td>${esc(o.frequency||'—')}</td><td>${esc((o.scheduled_times||[]).join(', ')||'—')}</td><td>${esc(o.food_instruction||'—')}</td><td><span class="status">${esc(medStatusFor(o,mar))}</span></td></tr>`).join(''):emptyRow(7,'No active medicine orders.');
 
-  const vg=document.querySelector('#vital-grid');if(vg)vg.innerHTML=`<article><span>Blood Pressure</span><strong>${esc(bp)}</strong><small>${latest.alert_level||'—'}</small></article><article><span>Pulse</span><strong>${latest.pulse!=null?`${latest.pulse} bpm`:'—'}</strong><small>${latest.recorded_at?timeIN(latest.recorded_at):'Not recorded'}</small></article><article><span>SpO₂</span><strong>${latest.spo2!=null?`${latest.spo2}%`:'—'}</strong><small>${latest.recorded_at?dateIN(latest.recorded_at):'Not recorded'}</small></article><article><span>${esc(latest.blood_sugar_type||'Blood Sugar')}</span><strong>${latest.blood_sugar!=null?esc(latest.blood_sugar):'—'}</strong><small>${latest.remarks?esc(latest.remarks):'Latest ERP value'}</small></article>`;
-  const vb=document.querySelector('#vitals-body');if(vb)vb.innerHTML=vitals.length?vitals.map(v=>`<tr><td>${esc(dateTimeIN(v.recorded_at))}</td><td>${v.systolic!=null||v.diastolic!=null?`${v.systolic??'—'}/${v.diastolic??'—'}`:'—/—'}</td><td>${v.pulse??'—'}</td><td>${v.spo2!=null?`${v.spo2}%`:'—'}</td><td>${v.temperature!=null?`${v.temperature}°F`:'—'}</td><td>${esc(v.recorded_by_name||'Samara staff')}</td></tr>`).join(''):emptyRow(6,'No vital signs recorded.');
+  // v1.0.46: each Vitals box shows the latest entry that has THAT reading (a sugar-only entry
+  // no longer blanks BP / Pulse / SpO2), and every box opens that reading's history below.
+  familyVitalsRows=vitals; renderVitalsPage();
 
   const plan=(data.physio_plans||[])[0]; const sess=(data.physio_sessions||[])[0];
   const pp=document.querySelector('#physio-plan');if(pp)pp.innerHTML=plan?`<h3>Current Plan</h3><div class="detail-grid"><div><span>Therapy Type</span><b>${esc(plan.therapy_type||'—')}</b></div><div><span>Frequency</span><b>${esc(plan.frequency||'—')}</b></div><div><span>Preferred Time</span><b>${esc(plan.preferred_time||'—')}</b></div><div><span>Physiotherapist</span><b>${esc(plan.physiotherapist_name||'—')}</b></div></div>`:'<h3>Current Plan</h3><p>No active physiotherapy plan recorded.</p>';
@@ -1006,13 +1007,37 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
 document.querySelector('#signout-button')?.addEventListener('click',closePortal);
 document.querySelector('#mobile-menu')?.addEventListener('click',()=>sidebar.classList.toggle('open'));
 function showViewCore(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')renderIntelligentReport();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+// v1.0.46: Vitals page boxes (navigable) + history table with Sugar column
+let familyVitalsRows=[],vitalsFilter='';
+const VITAL_MEASURES={
+  bp:{label:'Blood Pressure',col:1,has:v=>{const a=Number(v?.systolic),b=Number(v?.diastolic);return (v?.systolic!=null&&v?.systolic!==''&&a>0)||(v?.diastolic!=null&&v?.diastolic!==''&&b>0);},val:v=>`${v.systolic??'—'}/${v.diastolic??'—'}`},
+  pulse:{label:'Pulse',col:2,has:v=>v?.pulse!=null&&v?.pulse!=='',val:v=>`${v.pulse} bpm`},
+  spo2:{label:'SpO₂',col:3,has:v=>v?.spo2!=null&&v?.spo2!=='',val:v=>`${v.spo2}%`},
+  sugar:{label:'Blood Sugar',col:5,has:v=>v?.blood_sugar!=null&&v?.blood_sugar!=='',val:v=>`${v.blood_sugar}`}
+};
+function vitalWhen(v){const w=v?.recorded_at||v?.created_at;if(!w)return '';return activityDateISO(w)===todayISO()?`Today ${timeIN(w)}`:dateTimeIN(w);}
+function renderVitalsPage(){const rows=familyVitalsRows||[];
+  const vg=document.querySelector('#vital-grid');
+  if(vg){vg.innerHTML=Object.entries(VITAL_MEASURES).map(([k,m])=>{const r=rows.find(m.has);const label=k==='sugar'&&r?.blood_sugar_type?r.blood_sugar_type:m.label;const lvl=k==='bp'&&r?.alert_level?`${r.alert_level} · `:'';
+      return `<article class="vital-box vb-${k}${vitalsFilter===k?' active':''}" data-vital-filter="${k}" role="button" tabindex="0" aria-pressed="${vitalsFilter===k}"><span>${esc(label)}</span><strong>${r?esc(m.val(r)):'—'}</strong><small>${r?esc(lvl+vitalWhen(r)):'Not recorded yet'}</small></article>`;}).join('');}
+  const m=VITAL_MEASURES[vitalsFilter];const list=m?rows.filter(m.has):rows;
+  const bar=document.querySelector('#vitals-filter-bar');
+  if(bar){bar.hidden=!m;bar.innerHTML=m?`<span>Showing <b>${esc(m.label)}</b> readings · ${list.length} record${list.length===1?'':'s'}</span><button type="button" id="vitals-show-all">Show all vitals</button>`:'';}
+  const table=document.querySelector('#vitals-table');if(table){table.querySelectorAll('th,td').forEach(c=>c.classList.remove('vital-col-focus'));}
+  const vb=document.querySelector('#vitals-body');
+  if(vb)vb.innerHTML=list.length?list.map(v=>`<tr><td>${esc(dateTimeIN(v.recorded_at))}</td><td>${VITAL_MEASURES.bp.has(v)?esc(VITAL_MEASURES.bp.val(v)):'—'}</td><td>${v.pulse??'—'}</td><td>${v.spo2!=null?`${v.spo2}%`:'—'}</td><td>${v.temperature!=null?`${v.temperature}°F`:'—'}</td><td>${v.blood_sugar!=null?`${esc(v.blood_sugar_type||'Sugar')} ${esc(v.blood_sugar)}`:'—'}</td><td>${esc(v.recorded_by_name||'Samara staff')}</td></tr>`).join(''):emptyRow(7,m?`No ${m.label} readings recorded.`:'No vital signs recorded.');
+  if(m&&table){table.querySelectorAll(`tr>*:nth-child(${m.col+1})`).forEach(c=>c.classList.add('vital-col-focus'));}
+}
+function setVitalsFilter(k,scroll){vitalsFilter=(vitalsFilter===k)?'':k;renderVitalsPage();if(vitalsFilter&&scroll)document.querySelector('#vitals-table')?.scrollIntoView({behavior:'smooth',block:'start'});}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-vital-filter]');if(b){setVitalsFilter(b.dataset.vitalFilter,true);return;}if(e.target.closest('#vitals-show-all')){vitalsFilter='';renderVitalsPage();document.querySelector('#vital-grid')?.scrollIntoView({behavior:'smooth',block:'center'});}});
+document.addEventListener('keydown',e=>{if(e.key!=='Enter'&&e.key!==' ')return;const b=e.target.closest?.('[data-vital-filter]');if(b&&b===e.target){e.preventDefault();setVitalsFilter(b.dataset.vitalFilter,true);}});
 // v1.0.45: Back / Home buttons. Each page opened is a step in the browser history,
 // so the on-screen Back button and the phone's own Back button both return to the previous page.
 let currentPortalView='overview',portalViewDepth=0;
 function updateNavButtons(name){document.body.classList.toggle('on-home-view',name==='overview');const b=document.querySelector('#nav-back-button');if(b)b.title=portalViewDepth>0?'Back to previous page':'Back to Overview';}
 function showView(name,opts){name=name||'overview';if(!document.querySelector(`#view-${name}`))name='overview';
   if(!opts?.fromHistory&&name!==currentPortalView){portalViewDepth+=1;try{history.pushState({fpView:name,fpDepth:portalViewDepth},'');}catch(_){}}
-  currentPortalView=name;showViewCore(name);updateNavButtons(name);}
+  if(name!=='vitals'&&vitalsFilter){vitalsFilter='';renderVitalsPage();}currentPortalView=name;showViewCore(name);updateNavButtons(name);}
 try{history.replaceState({...(history.state||{}),fpView:'overview',fpDepth:0},'');}catch(_){}
 window.addEventListener('popstate',e=>{const st=e.state||{};portalViewDepth=Number(st.fpDepth)||0;const v=st.fpView||'overview';document.querySelector('#activity-timeline-modal')?.classList.remove('open');showView(v,{fromHistory:true});});
 document.querySelector('#nav-back-button')?.addEventListener('click',()=>{if(portalViewDepth>0)history.back();else showView('overview');});
