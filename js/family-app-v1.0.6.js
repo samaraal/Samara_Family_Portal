@@ -1005,7 +1005,19 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
 });
 document.querySelector('#signout-button')?.addEventListener('click',closePortal);
 document.querySelector('#mobile-menu')?.addEventListener('click',()=>sidebar.classList.toggle('open'));
-function showView(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')renderIntelligentReport();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+function showViewCore(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')renderIntelligentReport();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+// v1.0.45: Back / Home buttons. Each page opened is a step in the browser history,
+// so the on-screen Back button and the phone's own Back button both return to the previous page.
+let currentPortalView='overview',portalViewDepth=0;
+function updateNavButtons(name){document.body.classList.toggle('on-home-view',name==='overview');const b=document.querySelector('#nav-back-button');if(b)b.title=portalViewDepth>0?'Back to previous page':'Back to Overview';}
+function showView(name,opts){name=name||'overview';if(!document.querySelector(`#view-${name}`))name='overview';
+  if(!opts?.fromHistory&&name!==currentPortalView){portalViewDepth+=1;try{history.pushState({fpView:name,fpDepth:portalViewDepth},'');}catch(_){}}
+  currentPortalView=name;showViewCore(name);updateNavButtons(name);}
+try{history.replaceState({...(history.state||{}),fpView:'overview',fpDepth:0},'');}catch(_){}
+window.addEventListener('popstate',e=>{const st=e.state||{};portalViewDepth=Number(st.fpDepth)||0;const v=st.fpView||'overview';document.querySelector('#activity-timeline-modal')?.classList.remove('open');showView(v,{fromHistory:true});});
+document.querySelector('#nav-back-button')?.addEventListener('click',()=>{if(portalViewDepth>0)history.back();else showView('overview');});
+document.querySelector('#nav-home-button')?.addEventListener('click',()=>showView('overview'));
+updateNavButtons('overview');
 document.querySelectorAll('.side-nav button[data-view]').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view)));
 // v1.0.44: every Overview dashboard box opens its own page (click, tap, Enter or Space).
 (function bindDashboardCards(){const openCard=el=>{const v=el?.dataset?.openCard;if(v&&document.querySelector(`#view-${v}`))showView(v);};

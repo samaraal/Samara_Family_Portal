@@ -1,3 +1,7 @@
+## 1.0.45 — Back and Home buttons
+
+Every page except Overview now has **← Back** (returns to the previous page) and **⌂ Home** (returns to Overview) at the top. The phone's own Back button also steps back through the pages instead of leaving the portal. Tamil: "பின்செல்" / "முகப்பு". No database change.
+
 ## 1.0.44 — Overview boxes open their pages; Latest BP fixed
 
 All Overview dashboard boxes are now clickable (tap, click or Enter): **Medicines Today** → Medicines, **Daily Care** → Daily Care, **Latest BP** → Vitals, **Outstanding / Advance Balance** → Billing, and the **Current Condition** box → Vitals. The boxes lift slightly on hover and show a › arrow.

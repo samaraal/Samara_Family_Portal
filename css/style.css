@@ -446,3 +446,10 @@ th.med-no,td.med-no{width:52px;text-align:center;font-weight:800;color:#7a1d4d}
 #condition-card[data-open-card]:hover{opacity:.92}
 #overview-metrics [data-open-card]:focus-visible,#condition-card[data-open-card]:focus-visible{outline:3px solid #c2185b;outline-offset:3px}
 #overview-metrics [data-open-card] small:after{content:' ›';font-weight:800}
+
+/* v1.0.45: Back / Home buttons (hidden on Overview) */
+.header-actions .nav-step-btn{background:#fff0f7;color:#a60755;border:1px solid #f3c5da;font-weight:800;border-radius:999px;padding:9px 16px;cursor:pointer;white-space:nowrap}
+.header-actions .nav-step-btn:hover{background:#fbd9e8}
+.header-actions .nav-step-btn:focus-visible{outline:3px solid #c2185b;outline-offset:2px}
+body.on-home-view .header-actions .nav-step-btn{display:none}
+@media (max-width:760px){.header-actions .nav-step-btn{display:inline-block;padding:7px 10px;font-size:.82rem}.header-actions{gap:6px}.portal-header h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.portal-header>div:not(.header-actions){min-width:0}}
