@@ -1,3 +1,7 @@
+## 1.0.49 — Intake / Output opens with ALL chart days
+
+The Intake / Output page now opens with "All days (since the chart started)" (up to the last 3 months), so the first chart day is no longer left out; Last 7 days / This month / Selected period are still available.
+
 ## 1.0.48 — Intake / Output also in Admin Preview
 
 The Intake / Output box and history page now also appear in the ERP's "Preview Family Portal" (Admin Preview), using the history the ERP sends (ERP 2.18.89). The period filter and Print / Save PDF work there too. Families see no change.

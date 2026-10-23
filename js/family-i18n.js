@@ -71,6 +71,7 @@
 "Fluid intake and output history": "திரவ உட்கொள்ளல் மற்றும் வெளியேற்ற வரலாறு",
 "Print / Save PDF": "அச்சிடு / PDF சேமி",
 "Last 7 days": "கடந்த 7 நாட்கள்",
+"All days (since the chart started)": "அனைத்து நாட்களும் (சார்ட் தொடங்கியதிலிருந்து)",
 "This month": "இந்த மாதம்",
 "Selected period": "தேர்ந்தெடுத்த காலம்",
 "Apply": "பயன்படுத்து",

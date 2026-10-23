@@ -1017,7 +1017,8 @@ function ioBal(n){n=Math.round(Number(n)||0);return `${n>0?'+':n<0?'−':''}${Ma
 function ioAddDaysISO(iso,n){const d=new Date(`${iso}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
 function ioChartToday(){const d=new Date(Date.now()-7*3600000);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
 function ioRequestedRange(){
-  const mode=document.querySelector('#io-period')?.value||'7',t=ioChartToday();
+  const mode=document.querySelector('#io-period')?.value||'all',t=ioChartToday();
+  if(mode==='all')return {from:'2026-08-27',to:t}; // v1.0.49: every chart day (the ERP keeps up to the last 93 days)
   if(mode==='month')return {from:`${t.slice(0,8)}01`,to:t};
   if(mode==='custom'){const f=document.querySelector('#io-from')?.value||'',to=document.querySelector('#io-to')?.value||'';return {from:f||ioAddDaysISO(to||t,-6),to:to||t};}
   return {from:ioAddDaysISO(t,-6),to:t};
@@ -1047,6 +1048,7 @@ function ioBreakIn(d){return [['Oral',d.oral_ml],['IV',d.iv_ml],['Tube feed',d.t
 function ioBreakOut(d){const parts=[['Urine',d.urine_ml],['Drain',d.drain_ml],['Vomit',d.vomit_ml],['Other',d.other_out_ml]].filter(x=>Number(x[1])>0).map(x=>`${x[0]} ${ioMl(x[1])}`);
   if(Number(d.stool_count)>0||Number(d.stool_ml)>0){const types=(d.stool_types||[]).join(', ');parts.push(`Stool ${Number(d.stool_count)>0?`× ${d.stool_count}`:''}${Number(d.stool_ml)>0?` ${ioMl(d.stool_ml)}`:''}${types?` (${types})`:''}`.replace('  ',' '));}
   return parts.join(' · ')||'—';}
+function ioShownFrom(){const ds=(ioHistory?.days||[]).map(d=>d.chart_date).sort();return ds[0]||ioHistory?.from;} // v1.0.49: first day actually shown
 function ioDayLabel(d){return `${dateIN(d.chart_date)}${d.complete?'':' (today, so far)'}`;}
 function ioChartSVG(days){
   const list=[...(days||[])].sort((a,b)=>String(a.chart_date).localeCompare(String(b.chart_date))).slice(-31);
@@ -1078,7 +1080,7 @@ function renderIoPage(){
   const body=document.querySelector('#io-body');
   if(body)body.innerHTML=!ioHistory?.on_chart?emptyRow(6,'The Intake / Output chart is not kept for this resident.'):days.length?days.map(d=>`<tr><td><b>${esc(ioDayLabel(d))}</b></td><td>${esc(ioMl(d.intake_ml))}</td><td>${esc(ioMl(d.output_ml))}</td><td class="${Number(d.balance_ml)>=0?'io-pos':'io-neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join(''):emptyRow(6,'No Intake / Output entries in this period.');
   const t=ioTotals(days),sum=document.querySelector('#io-summary');
-  if(sum)sum.innerHTML=ioHistory?.on_chart?`<article><span>Days shown</span><strong>${t.days}</strong></article><article><span>Average intake / day</span><strong>${t.avgIn==null?'—':esc(ioMl(t.avgIn))}</strong></article><article><span>Average output / day</span><strong>${t.avgOut==null?'—':esc(ioMl(t.avgOut))}</strong></article><article><span>Period ${esc(dateIN(ioHistory.from))} – ${esc(dateIN(ioHistory.to))}</span><strong>${esc(ioBal(t.intake-t.output))}</strong></article>`:'';
+  if(sum)sum.innerHTML=ioHistory?.on_chart?`<article><span>Days shown</span><strong>${t.days}</strong></article><article><span>Average intake / day</span><strong>${t.avgIn==null?'—':esc(ioMl(t.avgIn))}</strong></article><article><span>Average output / day</span><strong>${t.avgOut==null?'—':esc(ioMl(t.avgOut))}</strong></article><article><span>Period ${esc(dateIN(ioShownFrom()))} – ${esc(dateIN(ioHistory.to))}</span><strong>${esc(ioBal(t.intake-t.output))}</strong></article>`:'';
   const ch=document.querySelector('#io-chart');
   if(ch){const svg=ioChartSVG(days);ch.hidden=!svg;ch.innerHTML=svg?`<div class="io-legend"><span><i style="background:${IO_IN_COLOR}"></i>Intake</span><span><i style="background:${IO_OUT_COLOR}"></i>Output</span></div>${svg}`:'';}
 }
@@ -1093,7 +1095,7 @@ function familyIoPdf(){
   const logo=new URL('./assets/samara-logo.png',window.location.href).href;
   const safe=String(patientName).replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'');
   const rows=days.map((d,i)=>`<tr><td>${i+1}</td><td><b>${esc(ioDayLabel(d))}</b></td><td class="num">${esc(ioMl(d.intake_ml))}</td><td class="num">${esc(ioMl(d.output_ml))}</td><td class="num ${Number(d.balance_ml)>=0?'pos':'neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join('');
-  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(safe)} Intake Output ${esc(ioHistory.from)} to ${esc(ioHistory.to)}</title><style>
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(safe)} Intake Output ${esc(ioShownFrom())} to ${esc(ioHistory.to)}</title><style>
     @page{size:A4;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#392531;margin:0;font-size:10px}
     .head{display:flex;align-items:center;border-bottom:3px solid #b70b61;padding-bottom:10px;margin-bottom:12px}.logo{width:120px;height:auto}.headtext{flex:1;text-align:center}.headtext h1{font-size:18px;color:#b70b61;margin:0 0 3px}.headtext h2{font-size:15px;margin:0}.headtext p{margin:3px 0 0;color:#6f5b65}
     .meta{border:1px solid #edc8da;border-radius:8px;padding:9px 11px;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:10px}.meta b{display:inline-block;min-width:92px;color:#7a1247}
@@ -1102,7 +1104,7 @@ function familyIoPdf(){
     table{width:100%;border-collapse:collapse}thead{display:table-header-group}tr{page-break-inside:avoid}th{background:#f7dce8;color:#67123d;border:1px solid #dfb4c6;padding:5px;text-align:left}td{border:1px solid #ead4dd;padding:5px;vertical-align:top}.num{text-align:right;white-space:nowrap}.pos{color:#0a7a42;font-weight:700}.neg{color:#b42318;font-weight:700}
     .note{margin-top:10px;color:#6f5b65}.foot{border-top:1px solid #eccbd9;margin-top:14px;padding-top:5px;text-align:center;color:#6f5a64;font-size:8px}
     @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-  </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Samara Assisted Living</p><h2>INTAKE / OUTPUT (FLUID BALANCE) HISTORY</h2><p>${esc(dateIN(ioHistory.from))} to ${esc(dateIN(ioHistory.to))}</p></div></div>
+  </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Samara Assisted Living</p><h2>INTAKE / OUTPUT (FLUID BALANCE) HISTORY</h2><p>${esc(dateIN(ioShownFrom()))} to ${esc(dateIN(ioHistory.to))}</p></div></div>
   <div class="meta"><div><b>Guest Name</b> ${esc(patientName)}</div><div><b>Guest ID</b> ${esc(residentId)}</div><div><b>Room / Bed</b> ${esc(room)}</div><div><b>Generated on</b> ${esc(generated)}</div></div>
   <div class="sum"><div class="box"><span>Days shown</span><strong>${t.days}</strong></div><div class="box"><span>Total intake</span><strong>${esc(ioMl(t.intake))}</strong></div><div class="box"><span>Total output</span><strong>${esc(ioMl(t.output))}</strong></div><div class="box"><span>Net balance</span><strong>${esc(ioBal(t.intake-t.output))}</strong></div></div>
   <div class="chart"><div class="legend"><i style="background:${IO_IN_COLOR}"></i>Intake<i style="background:${IO_OUT_COLOR}"></i>Output</div>${ioChartSVG(days)}</div>
