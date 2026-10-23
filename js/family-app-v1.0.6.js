@@ -1063,6 +1063,8 @@ function ioChartSVG(days){
     return `<rect x="${xi}" y="${yi}" width="${bw}" height="${Math.max(0,base-yi)}" rx="3" fill="${IO_IN_COLOR}"><title>${esc(ioDayLabel(d))} · Intake ${ioMl(d.intake_ml)}</title></rect><rect x="${xo}" y="${yo}" width="${bw}" height="${Math.max(0,base-yo)}" rx="3" fill="${IO_OUT_COLOR}"><title>${esc(ioDayLabel(d))} · Output ${ioMl(d.output_ml)}</title></rect>${vals}${lab}`;}).join('');
   return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily intake and output in ml">${g}<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="#c9a3b5"/>${bars}<text x="${L}" y="${H-6}" font-size="10" fill="#7b6670">ml per day (7 AM to 7 AM)</text></svg>`;
 }
+// v1.0.50: clear colour key — pink = Intake (taken in), blue = Output (passed out); same colours in the table.
+function ioLegendHTML(){return `<div class="io-legend"><span class="io-key io-key-in"><i style="background:${IO_IN_COLOR}"></i><b>Pink bar = Intake</b> — fluids taken in (oral, IV, tube feed)</span><span class="io-key io-key-out"><i style="background:${IO_OUT_COLOR}"></i><b>Blue bar = Output</b> — fluids passed out (urine, drain, vomit)</span></div>`;}
 function ioTotals(days){const done=(days||[]).filter(d=>d.complete);const sum=(k,arr)=>arr.reduce((n,d)=>n+(Number(d[k])||0),0);
   return {days:(days||[]).length,intake:sum('intake_ml',days||[]),output:sum('output_ml',days||[]),avgIn:done.length?sum('intake_ml',done)/done.length:null,avgOut:done.length?sum('output_ml',done)/done.length:null};}
 function renderIoCard(){
@@ -1078,11 +1080,11 @@ function renderIoCard(){
 function renderIoPage(){
   const days=ioHistory?.days||[];
   const body=document.querySelector('#io-body');
-  if(body)body.innerHTML=!ioHistory?.on_chart?emptyRow(6,'The Intake / Output chart is not kept for this resident.'):days.length?days.map(d=>`<tr><td><b>${esc(ioDayLabel(d))}</b></td><td>${esc(ioMl(d.intake_ml))}</td><td>${esc(ioMl(d.output_ml))}</td><td class="${Number(d.balance_ml)>=0?'io-pos':'io-neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join(''):emptyRow(6,'No Intake / Output entries in this period.');
+  if(body)body.innerHTML=!ioHistory?.on_chart?emptyRow(6,'The Intake / Output chart is not kept for this resident.'):days.length?days.map(d=>`<tr><td><b>${esc(ioDayLabel(d))}</b></td><td class="io-in-val">${esc(ioMl(d.intake_ml))}</td><td class="io-out-val">${esc(ioMl(d.output_ml))}</td><td class="${Number(d.balance_ml)>=0?'io-pos':'io-neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join(''):emptyRow(6,'No Intake / Output entries in this period.');
   const t=ioTotals(days),sum=document.querySelector('#io-summary');
-  if(sum)sum.innerHTML=ioHistory?.on_chart?`<article><span>Days shown</span><strong>${t.days}</strong></article><article><span>Average intake / day</span><strong>${t.avgIn==null?'—':esc(ioMl(t.avgIn))}</strong></article><article><span>Average output / day</span><strong>${t.avgOut==null?'—':esc(ioMl(t.avgOut))}</strong></article><article><span>Period ${esc(dateIN(ioShownFrom()))} – ${esc(dateIN(ioHistory.to))}</span><strong>${esc(ioBal(t.intake-t.output))}</strong></article>`:'';
+  if(sum)sum.innerHTML=ioHistory?.on_chart?`<article><span>Days shown</span><strong>${t.days}</strong></article><article class="io-sum-in"><span>Average intake / day</span><strong>${t.avgIn==null?'—':esc(ioMl(t.avgIn))}</strong></article><article class="io-sum-out"><span>Average output / day</span><strong>${t.avgOut==null?'—':esc(ioMl(t.avgOut))}</strong></article><article><span>Balance (intake − output) · ${esc(dateIN(ioShownFrom()))} – ${esc(dateIN(ioHistory.to))}</span><strong>${esc(ioBal(t.intake-t.output))}</strong></article>`:'';
   const ch=document.querySelector('#io-chart');
-  if(ch){const svg=ioChartSVG(days);ch.hidden=!svg;ch.innerHTML=svg?`<div class="io-legend"><span><i style="background:${IO_IN_COLOR}"></i>Intake</span><span><i style="background:${IO_OUT_COLOR}"></i>Output</span></div>${svg}`:'';}
+  if(ch){const svg=ioChartSVG(days);ch.hidden=!svg;ch.innerHTML=svg?`${ioLegendHTML()}${svg}`:'';}
 }
 function familyIoPdf(){
   if(!ioHistory?.on_chart){alert('The Intake / Output chart is not kept for this resident.');return;}
@@ -1094,7 +1096,7 @@ function familyIoPdf(){
   const generated=new Date().toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
   const logo=new URL('./assets/samara-logo.png',window.location.href).href;
   const safe=String(patientName).replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'');
-  const rows=days.map((d,i)=>`<tr><td>${i+1}</td><td><b>${esc(ioDayLabel(d))}</b></td><td class="num">${esc(ioMl(d.intake_ml))}</td><td class="num">${esc(ioMl(d.output_ml))}</td><td class="num ${Number(d.balance_ml)>=0?'pos':'neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join('');
+  const rows=days.map((d,i)=>`<tr><td>${i+1}</td><td><b>${esc(ioDayLabel(d))}</b></td><td class="num" style="color:${IO_IN_COLOR};font-weight:700">${esc(ioMl(d.intake_ml))}</td><td class="num" style="color:${IO_OUT_COLOR};font-weight:700">${esc(ioMl(d.output_ml))}</td><td class="num ${Number(d.balance_ml)>=0?'pos':'neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join('');
   const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(safe)} Intake Output ${esc(ioShownFrom())} to ${esc(ioHistory.to)}</title><style>
     @page{size:A4;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#392531;margin:0;font-size:10px}
     .head{display:flex;align-items:center;border-bottom:3px solid #b70b61;padding-bottom:10px;margin-bottom:12px}.logo{width:120px;height:auto}.headtext{flex:1;text-align:center}.headtext h1{font-size:18px;color:#b70b61;margin:0 0 3px}.headtext h2{font-size:15px;margin:0}.headtext p{margin:3px 0 0;color:#6f5b65}
@@ -1107,8 +1109,8 @@ function familyIoPdf(){
   </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Samara Assisted Living</p><h2>INTAKE / OUTPUT (FLUID BALANCE) HISTORY</h2><p>${esc(dateIN(ioShownFrom()))} to ${esc(dateIN(ioHistory.to))}</p></div></div>
   <div class="meta"><div><b>Guest Name</b> ${esc(patientName)}</div><div><b>Guest ID</b> ${esc(residentId)}</div><div><b>Room / Bed</b> ${esc(room)}</div><div><b>Generated on</b> ${esc(generated)}</div></div>
   <div class="sum"><div class="box"><span>Days shown</span><strong>${t.days}</strong></div><div class="box"><span>Total intake</span><strong>${esc(ioMl(t.intake))}</strong></div><div class="box"><span>Total output</span><strong>${esc(ioMl(t.output))}</strong></div><div class="box"><span>Net balance</span><strong>${esc(ioBal(t.intake-t.output))}</strong></div></div>
-  <div class="chart"><div class="legend"><i style="background:${IO_IN_COLOR}"></i>Intake<i style="background:${IO_OUT_COLOR}"></i>Output</div>${ioChartSVG(days)}</div>
-  <table><thead><tr><th style="width:4%">Sl.</th><th style="width:15%">Date (7 AM–7 AM)</th><th style="width:10%">Intake</th><th style="width:10%">Output</th><th style="width:10%">Balance</th><th style="width:24%">Intake details</th><th style="width:27%">Output details</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="chart"><div class="legend"><i style="background:${IO_IN_COLOR}"></i><b style="color:${IO_IN_COLOR}">Pink bar = Intake</b> (fluids taken in) <i style="background:${IO_OUT_COLOR}"></i><b style="color:${IO_OUT_COLOR}">Blue bar = Output</b> (fluids passed out)</div>${ioChartSVG(days)}</div>
+  <table><thead><tr><th style="width:4%">Sl.</th><th style="width:15%">Date (7 AM–7 AM)</th><th style="width:10%;color:${IO_IN_COLOR}">■ Intake</th><th style="width:10%;color:${IO_OUT_COLOR}">■ Output</th><th style="width:10%">Balance</th><th style="width:24%">Intake details</th><th style="width:27%">Output details</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="note">Recorded by the Samara nurses on the Intake / Output chart. Each day runs from 7 AM to 7 AM; tea, milk and juice served are included in oral intake. For any question about these figures, please speak with the Samara nursing team or the treating doctor.</div>
   <div class="foot">Samara Health Care LLP · Computer-generated from the Samara Family Portal · No manual alteration permitted</div>
   <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`;

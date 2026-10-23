@@ -1,3 +1,7 @@
+## 1.0.50 — Intake / Output: clear colour key
+
+The chart now has a large key — **Pink bar = Intake** (fluids taken in: oral, IV, tube feed) and **Blue bar = Output** (fluids passed out: urine, drain, vomit). The Intake and Output columns of the table and the average boxes use the same pink and blue, and the PDF prints the same key. The last box is labelled "Balance (intake − output)".
+
 ## 1.0.49 — Intake / Output opens with ALL chart days
 
 The Intake / Output page now opens with "All days (since the chart started)" (up to the last 3 months), so the first chart day is no longer left out; Last 7 days / This month / Selected period are still available.

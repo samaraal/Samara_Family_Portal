@@ -489,3 +489,14 @@ body.on-home-view .header-actions .nav-step-btn{display:none}
 .io-pos{color:#0a7a42;font-weight:800}.io-neg{color:#b42318;font-weight:800}
 .io-filter label.io-custom[hidden]{display:none}
 #io-table td:nth-child(2),#io-table td:nth-child(3),#io-table td:nth-child(4){white-space:nowrap}
+
+/* v1.0.50: clearer Intake / Output colour key */
+.io-legend{gap:10px 22px!important;font-size:.95rem!important;margin:2px 4px 10px!important}
+.io-legend .io-key{display:inline-flex;align-items:center;gap:4px;padding:6px 12px;border-radius:999px;font-weight:600}
+.io-legend .io-key i{width:16px!important;height:16px!important;border-radius:4px!important;margin-right:6px!important}
+.io-legend .io-key-in{background:#fdeef5;color:#7a1247}.io-legend .io-key-in b{color:#b20b5d}
+.io-legend .io-key-out{background:#e9f5fb;color:#14506b}.io-legend .io-key-out b{color:#1d7fae}
+#io-table th.io-th-in,#io-table td.io-in-val{color:#b20b5d!important;font-weight:800}
+#io-table th.io-th-out,#io-table td.io-out-val{color:#1d7fae!important;font-weight:800}
+.io-summary article.io-sum-in strong{color:#b20b5d}.io-summary article.io-sum-out strong{color:#1d7fae}
+#io-table th.io-th-in,#io-table th.io-th-out{white-space:nowrap}
