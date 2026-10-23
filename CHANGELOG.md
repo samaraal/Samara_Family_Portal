@@ -1,3 +1,7 @@
+## 1.0.48 — Intake / Output also in Admin Preview
+
+The Intake / Output box and history page now also appear in the ERP's "Preview Family Portal" (Admin Preview), using the history the ERP sends (ERP 2.18.89). The period filter and Print / Save PDF work there too. Families see no change.
+
 ## 1.0.47 — Intake / Output history with chart and Printable PDF (needs ERP SQL 278)
 
 For Guests on the nurses' Intake / Output chart, the Overview gets an **Intake / Output** box (today's intake / output since 7 AM and the balance) and a new **Intake / Output** page in the menu:

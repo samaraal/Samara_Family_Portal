@@ -1023,6 +1023,14 @@ function ioRequestedRange(){
   return {from:ioAddDaysISO(t,-6),to:t};
 }
 async function loadIoHistory(){
+  // v1.0.48: Admin Preview has no family session — the ERP sends the last 93 chart days; filter the period here.
+  if(adminPreviewMode){
+    const all=latestDashboardData?.io_history_all,r=ioRequestedRange();
+    const from=r.from<'2026-08-27'?'2026-08-27':r.from,to=r.to;
+    ioHistory=all&&all.on_chart?{...all,from,to,days:(all.days||[]).filter(d=>d.chart_date>=from&&d.chart_date<=to)}:{on_chart:false};
+    const nav=document.querySelector('#nav-fluids');if(nav)nav.hidden=!ioHistory.on_chart;
+    renderIoCard();renderIoPage();return;
+  }
   if(!familySession?.session_token||!supabaseClient||ioLoading)return;
   ioLoading=true;
   try{
