@@ -618,6 +618,7 @@ function renderDashboard(data){
   // v1.0.46: each Vitals box shows the latest entry that has THAT reading (a sugar-only entry
   // no longer blanks BP / Pulse / SpO2), and every box opens that reading's history below.
   familyVitalsRows=vitals; renderVitalsPage();
+  renderIoCard();loadIoHistory(); // v1.0.47
 
   const plan=(data.physio_plans||[])[0]; const sess=(data.physio_sessions||[])[0];
   const pp=document.querySelector('#physio-plan');if(pp)pp.innerHTML=plan?`<h3>Current Plan</h3><div class="detail-grid"><div><span>Therapy Type</span><b>${esc(plan.therapy_type||'—')}</b></div><div><span>Frequency</span><b>${esc(plan.frequency||'—')}</b></div><div><span>Preferred Time</span><b>${esc(plan.preferred_time||'—')}</b></div><div><span>Physiotherapist</span><b>${esc(plan.physiotherapist_name||'—')}</b></div></div>`:'<h3>Current Plan</h3><p>No active physiotherapy plan recorded.</p>';
@@ -1007,6 +1008,106 @@ document.querySelector('#login-form')?.addEventListener('submit',async event=>{
 document.querySelector('#signout-button')?.addEventListener('click',closePortal);
 document.querySelector('#mobile-menu')?.addEventListener('click',()=>sidebar.classList.toggle('open'));
 function showViewCore(name){if(name==='feedback')loadFamilyFeedbackHistory();if(name==='report')renderIntelligentReport();if(name==='visits')loadFamilyVisitHistory();if(name==='messages')loadFamilyMessages();document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.querySelector(`#view-${name}`)?.classList.add('active');document.querySelectorAll('.side-nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===name));const active=document.querySelector(`.side-nav button[data-view="${name}"]`);pageTitle.textContent=active?.textContent.trim()||'Family Portal';sidebar.classList.remove('open');window.scrollTo({top:0,behavior:'smooth'});}
+// v1.0.47: Intake / Output history (ERP SQL 278 family_portal_io_history) — day totals + breakdown,
+// 7-day style bar chart, period filter with Apply, Print / Save PDF. Only for Guests on the nurses' I/O chart.
+let ioHistory=null,ioLoading=false;
+const IO_IN_COLOR='#b20b5d',IO_OUT_COLOR='#1d7fae';
+function ioMl(n){return `${Math.round(Number(n)||0).toLocaleString('en-IN')} ml`;}
+function ioBal(n){n=Math.round(Number(n)||0);return `${n>0?'+':n<0?'−':''}${Math.abs(n).toLocaleString('en-IN')} ml`;}
+function ioAddDaysISO(iso,n){const d=new Date(`${iso}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+function ioChartToday(){const d=new Date(Date.now()-7*3600000);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function ioRequestedRange(){
+  const mode=document.querySelector('#io-period')?.value||'7',t=ioChartToday();
+  if(mode==='month')return {from:`${t.slice(0,8)}01`,to:t};
+  if(mode==='custom'){const f=document.querySelector('#io-from')?.value||'',to=document.querySelector('#io-to')?.value||'';return {from:f||ioAddDaysISO(to||t,-6),to:to||t};}
+  return {from:ioAddDaysISO(t,-6),to:t};
+}
+async function loadIoHistory(){
+  if(!familySession?.session_token||!supabaseClient||ioLoading)return;
+  ioLoading=true;
+  try{
+    const r=ioRequestedRange();
+    const {data,error}=await supabaseClient.rpc('family_portal_io_history',{p_session_token:familySession.session_token,p_from:r.from,p_to:r.to});
+    if(error)throw error;
+    ioHistory=data&&typeof data==='object'?data:{on_chart:false};
+  }catch(error){ioHistory={on_chart:false};console.warn('Family I/O history could not be loaded (needs ERP SQL 278)',error);}
+  finally{ioLoading=false;}
+  const nav=document.querySelector('#nav-fluids');if(nav)nav.hidden=!ioHistory?.on_chart;
+  renderIoCard();renderIoPage();
+}
+function ioBreakIn(d){return [['Oral',d.oral_ml],['IV',d.iv_ml],['Tube feed',d.tube_ml],['Other',d.other_in_ml]].filter(x=>Number(x[1])>0).map(x=>`${x[0]} ${ioMl(x[1])}`).join(' · ')||'—';}
+function ioBreakOut(d){const parts=[['Urine',d.urine_ml],['Drain',d.drain_ml],['Vomit',d.vomit_ml],['Other',d.other_out_ml]].filter(x=>Number(x[1])>0).map(x=>`${x[0]} ${ioMl(x[1])}`);
+  if(Number(d.stool_count)>0||Number(d.stool_ml)>0){const types=(d.stool_types||[]).join(', ');parts.push(`Stool ${Number(d.stool_count)>0?`× ${d.stool_count}`:''}${Number(d.stool_ml)>0?` ${ioMl(d.stool_ml)}`:''}${types?` (${types})`:''}`.replace('  ',' '));}
+  return parts.join(' · ')||'—';}
+function ioDayLabel(d){return `${dateIN(d.chart_date)}${d.complete?'':' (today, so far)'}`;}
+function ioChartSVG(days){
+  const list=[...(days||[])].sort((a,b)=>String(a.chart_date).localeCompare(String(b.chart_date))).slice(-31);
+  if(!list.length)return '';
+  const W=760,H=240,L=46,R=10,T=16,B=44,max=Math.max(500,...list.map(d=>Math.max(Number(d.intake_ml)||0,Number(d.output_ml)||0)));
+  const top=Math.ceil(max/500)*500,gw=(W-L-R)/list.length,bw=Math.max(3,Math.min(26,gw*0.34)),y=v=>T+(H-T-B)*(1-(Number(v)||0)/top);
+  let g='';for(let i=0;i<=4;i++){const v=top*i/4,yy=y(v);g+=`<line x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}" stroke="#f1dbe5" stroke-width="1"/><text x="${L-6}" y="${yy+4}" font-size="10" text-anchor="end" fill="#7b6670">${Math.round(v)}</text>`;}
+  const showVals=list.length<=10,step=Math.ceil(list.length/10);
+  const bars=list.map((d,i)=>{const cx=L+gw*i+gw/2,xi=cx-bw-1,xo=cx+1,yi=y(d.intake_ml),yo=y(d.output_ml),base=y(0);
+    const lab=(i%step===0||i===list.length-1)?`<text x="${cx}" y="${H-B+16}" font-size="10" text-anchor="middle" fill="#5d1039">${esc(dateIN(d.chart_date).slice(0,5))}</text>`:'';
+    const vals=showVals?`<text x="${xi+bw/2}" y="${yi-3}" font-size="9" text-anchor="middle" fill="${IO_IN_COLOR}">${Math.round(d.intake_ml)}</text><text x="${xo+bw/2}" y="${yo-3}" font-size="9" text-anchor="middle" fill="${IO_OUT_COLOR}">${Math.round(d.output_ml)}</text>`:'';
+    return `<rect x="${xi}" y="${yi}" width="${bw}" height="${Math.max(0,base-yi)}" rx="3" fill="${IO_IN_COLOR}"><title>${esc(ioDayLabel(d))} · Intake ${ioMl(d.intake_ml)}</title></rect><rect x="${xo}" y="${yo}" width="${bw}" height="${Math.max(0,base-yo)}" rx="3" fill="${IO_OUT_COLOR}"><title>${esc(ioDayLabel(d))} · Output ${ioMl(d.output_ml)}</title></rect>${vals}${lab}`;}).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Daily intake and output in ml">${g}<line x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}" stroke="#c9a3b5"/>${bars}<text x="${L}" y="${H-6}" font-size="10" fill="#7b6670">ml per day (7 AM to 7 AM)</text></svg>`;
+}
+function ioTotals(days){const done=(days||[]).filter(d=>d.complete);const sum=(k,arr)=>arr.reduce((n,d)=>n+(Number(d[k])||0),0);
+  return {days:(days||[]).length,intake:sum('intake_ml',days||[]),output:sum('output_ml',days||[]),avgIn:done.length?sum('intake_ml',done)/done.length:null,avgOut:done.length?sum('output_ml',done)/done.length:null};}
+function renderIoCard(){
+  const grid=document.querySelector('#overview-metrics');if(!grid)return;
+  grid.querySelector('.ov-fluids')?.remove();
+  if(!ioHistory?.on_chart)return;
+  const t=ioChartToday(),d=(ioHistory.days||[]).find(x=>x.chart_date===t);
+  const card=document.createElement('article');card.className='metric-card ov-fluids';card.dataset.openCard='fluids';card.setAttribute('role','button');card.tabIndex=0;
+  card.innerHTML=d?`<span>Intake / Output</span><strong>${esc(Math.round(d.intake_ml).toLocaleString('en-IN'))} / ${esc(Math.round(d.output_ml).toLocaleString('en-IN'))} ml</strong><small>Today since 7 AM · balance ${esc(ioBal(d.balance_ml))}</small>`
+    :`<span>Intake / Output</span><strong>—</strong><small>${ioHistory.chart_on_now?'No entries yet today':'Chart stopped — tap for history'}</small>`;
+  grid.appendChild(card);
+}
+function renderIoPage(){
+  const days=ioHistory?.days||[];
+  const body=document.querySelector('#io-body');
+  if(body)body.innerHTML=!ioHistory?.on_chart?emptyRow(6,'The Intake / Output chart is not kept for this resident.'):days.length?days.map(d=>`<tr><td><b>${esc(ioDayLabel(d))}</b></td><td>${esc(ioMl(d.intake_ml))}</td><td>${esc(ioMl(d.output_ml))}</td><td class="${Number(d.balance_ml)>=0?'io-pos':'io-neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join(''):emptyRow(6,'No Intake / Output entries in this period.');
+  const t=ioTotals(days),sum=document.querySelector('#io-summary');
+  if(sum)sum.innerHTML=ioHistory?.on_chart?`<article><span>Days shown</span><strong>${t.days}</strong></article><article><span>Average intake / day</span><strong>${t.avgIn==null?'—':esc(ioMl(t.avgIn))}</strong></article><article><span>Average output / day</span><strong>${t.avgOut==null?'—':esc(ioMl(t.avgOut))}</strong></article><article><span>Period ${esc(dateIN(ioHistory.from))} – ${esc(dateIN(ioHistory.to))}</span><strong>${esc(ioBal(t.intake-t.output))}</strong></article>`:'';
+  const ch=document.querySelector('#io-chart');
+  if(ch){const svg=ioChartSVG(days);ch.hidden=!svg;ch.innerHTML=svg?`<div class="io-legend"><span><i style="background:${IO_IN_COLOR}"></i>Intake</span><span><i style="background:${IO_OUT_COLOR}"></i>Output</span></div>${svg}`:'';}
+}
+function familyIoPdf(){
+  if(!ioHistory?.on_chart){alert('The Intake / Output chart is not kept for this resident.');return;}
+  const days=ioHistory.days||[];if(!days.length){alert('No Intake / Output entries in this period.');return;}
+  const p=(latestDashboardData||{}).patient||{},t=ioTotals(days);
+  const patientName=p.patient_name||familySession?.patient_name||'Resident';
+  const residentId=p.patient_code||p.patient_id||familySession?.patient_code||'—';
+  const room=[p.room_no||familySession?.room_no,p.bed_no||familySession?.bed_no].filter(Boolean).join(' / ')||'—';
+  const generated=new Date().toLocaleString('en-IN',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit',hour12:true});
+  const logo=new URL('./assets/samara-logo.png',window.location.href).href;
+  const safe=String(patientName).replace(/[^a-z0-9]+/gi,'_').replace(/^_|_$/g,'');
+  const rows=days.map((d,i)=>`<tr><td>${i+1}</td><td><b>${esc(ioDayLabel(d))}</b></td><td class="num">${esc(ioMl(d.intake_ml))}</td><td class="num">${esc(ioMl(d.output_ml))}</td><td class="num ${Number(d.balance_ml)>=0?'pos':'neg'}">${esc(ioBal(d.balance_ml))}</td><td>${esc(ioBreakIn(d))}</td><td>${esc(ioBreakOut(d))}</td></tr>`).join('');
+  const html=`<!doctype html><html><head><meta charset="utf-8"><title>${esc(safe)} Intake Output ${esc(ioHistory.from)} to ${esc(ioHistory.to)}</title><style>
+    @page{size:A4;margin:12mm}*{box-sizing:border-box}body{font-family:Arial,sans-serif;color:#392531;margin:0;font-size:10px}
+    .head{display:flex;align-items:center;border-bottom:3px solid #b70b61;padding-bottom:10px;margin-bottom:12px}.logo{width:120px;height:auto}.headtext{flex:1;text-align:center}.headtext h1{font-size:18px;color:#b70b61;margin:0 0 3px}.headtext h2{font-size:15px;margin:0}.headtext p{margin:3px 0 0;color:#6f5b65}
+    .meta{border:1px solid #edc8da;border-radius:8px;padding:9px 11px;display:grid;grid-template-columns:1fr 1fr;gap:6px 24px;margin-bottom:10px}.meta b{display:inline-block;min-width:92px;color:#7a1247}
+    .sum{display:flex;gap:8px;margin:0 0 10px}.box{flex:1;border:1px solid #e7c3d4;border-radius:8px;padding:6px 9px;background:#fff7fb}.box span{display:block;color:#6d5963;font-size:8.5px;font-weight:700;text-transform:uppercase}.box strong{display:block;font-size:14px;color:#321d28}
+    .chart{border:1px solid #edc8da;border-radius:8px;padding:6px 8px;margin-bottom:10px}.chart svg{width:100%;height:auto}.legend{font-weight:700;color:#5d1039;margin:0 0 4px}.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 5px 0 12px;vertical-align:-1px}
+    table{width:100%;border-collapse:collapse}thead{display:table-header-group}tr{page-break-inside:avoid}th{background:#f7dce8;color:#67123d;border:1px solid #dfb4c6;padding:5px;text-align:left}td{border:1px solid #ead4dd;padding:5px;vertical-align:top}.num{text-align:right;white-space:nowrap}.pos{color:#0a7a42;font-weight:700}.neg{color:#b42318;font-weight:700}
+    .note{margin-top:10px;color:#6f5b65}.foot{border-top:1px solid #eccbd9;margin-top:14px;padding-top:5px;text-align:center;color:#6f5a64;font-size:8px}
+    @media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+  </style></head><body><div class="head"><img class="logo" src="${logo}" alt="Samara"><div class="headtext"><h1>SAMARA HEALTH CARE LLP</h1><p>Samara Assisted Living</p><h2>INTAKE / OUTPUT (FLUID BALANCE) HISTORY</h2><p>${esc(dateIN(ioHistory.from))} to ${esc(dateIN(ioHistory.to))}</p></div></div>
+  <div class="meta"><div><b>Guest Name</b> ${esc(patientName)}</div><div><b>Guest ID</b> ${esc(residentId)}</div><div><b>Room / Bed</b> ${esc(room)}</div><div><b>Generated on</b> ${esc(generated)}</div></div>
+  <div class="sum"><div class="box"><span>Days shown</span><strong>${t.days}</strong></div><div class="box"><span>Total intake</span><strong>${esc(ioMl(t.intake))}</strong></div><div class="box"><span>Total output</span><strong>${esc(ioMl(t.output))}</strong></div><div class="box"><span>Net balance</span><strong>${esc(ioBal(t.intake-t.output))}</strong></div></div>
+  <div class="chart"><div class="legend"><i style="background:${IO_IN_COLOR}"></i>Intake<i style="background:${IO_OUT_COLOR}"></i>Output</div>${ioChartSVG(days)}</div>
+  <table><thead><tr><th style="width:4%">Sl.</th><th style="width:15%">Date (7 AM–7 AM)</th><th style="width:10%">Intake</th><th style="width:10%">Output</th><th style="width:10%">Balance</th><th style="width:24%">Intake details</th><th style="width:27%">Output details</th></tr></thead><tbody>${rows}</tbody></table>
+  <div class="note">Recorded by the Samara nurses on the Intake / Output chart. Each day runs from 7 AM to 7 AM; tea, milk and juice served are included in oral intake. For any question about these figures, please speak with the Samara nursing team or the treating doctor.</div>
+  <div class="foot">Samara Health Care LLP · Computer-generated from the Samara Family Portal · No manual alteration permitted</div>
+  <script>window.addEventListener('load',()=>setTimeout(()=>window.print(),350));<\/script></body></html>`;
+  const w=samaraPrintBar(window.open('','_blank'));
+  if(!w){alert('Please allow pop-ups to download the Intake / Output PDF.');return;}
+  w.document.open();w.document.write(html);w.document.close();
+}
+document.addEventListener('change',e=>{if(e.target?.id==='io-period'){const c=e.target.value==='custom';document.querySelectorAll('.io-custom').forEach(x=>x.hidden=!c);if(c){const t=ioChartToday(),f=document.querySelector('#io-from'),to=document.querySelector('#io-to');if(f&&!f.value)f.value=ioAddDaysISO(t,-6);if(to&&!to.value)to.value=t;if(f)f.max=t;if(to)to.max=t;if(f)f.min='2026-08-27';if(to)to.min='2026-08-27';}}});
+document.addEventListener('click',e=>{if(e.target.closest('#io-apply'))loadIoHistory();else if(e.target.closest('#io-print'))familyIoPdf();});
 // v1.0.46: Vitals page boxes (navigable) + history table with Sugar column
 let familyVitalsRows=[],vitalsFilter='';
 const VITAL_MEASURES={

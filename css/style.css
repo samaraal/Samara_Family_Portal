@@ -467,3 +467,25 @@ body.on-home-view .header-actions .nav-step-btn{display:none}
 .vitals-filter-bar[hidden]{display:none}
 .vitals-filter-bar button{background:#b01264;color:#fff;border:0;border-radius:999px;padding:8px 14px;font-weight:800;cursor:pointer}
 #vitals-table .vital-col-focus{background:#fde3ee;color:#5d1039;font-weight:800}
+
+/* v1.0.47: Intake / Output history */
+#overview-metrics .ov-fluids{background:linear-gradient(135deg,#f2fbff,#e3f4fb);border-color:#b9def0}
+#overview-metrics .ov-fluids strong{color:#0e6b8c}
+#overview-metrics .ov-fluids:before{content:'💧';background:#d5eef8;color:#0e6b8c}
+.io-note{color:var(--muted);margin:-4px 0 12px}
+.io-print-btn,#io-apply{border:0;border-radius:12px;padding:10px 16px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#b20b5d,#d63c86);color:#fff}
+.io-filter{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin:0 0 12px}
+.io-filter label{display:flex;flex-direction:column;gap:4px;font-weight:800;color:#7a1247;font-size:.85rem}
+.io-filter select,.io-filter input{border:1px solid #f0b3cd;border-radius:10px;padding:8px 10px;font:inherit;background:#fff;min-width:150px}
+.io-summary{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:0 0 12px}
+.io-summary article{background:linear-gradient(120deg,#fff6fa 0%,#fde3ee 55%,#f8c9dc 100%);border:2px solid #f0b3cd;border-radius:18px;padding:12px 14px}
+.io-summary article span{display:block;color:#7a1247;font-weight:800;font-size:.82rem}
+.io-summary article strong{display:block;color:#5d1039;font-size:1.35rem;margin-top:2px}
+.io-chart-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px 12px 6px;margin:0 0 12px;overflow:hidden}
+.io-chart-card svg{width:100%;height:auto;display:block}
+.io-legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;font-weight:700;color:#5d1039;margin:2px 4px 6px}
+.io-legend i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+#io-table td small{display:block;color:var(--muted)}
+.io-pos{color:#0a7a42;font-weight:800}.io-neg{color:#b42318;font-weight:800}
+.io-filter label.io-custom[hidden]{display:none}
+#io-table td:nth-child(2),#io-table td:nth-child(3),#io-table td:nth-child(4){white-space:nowrap}

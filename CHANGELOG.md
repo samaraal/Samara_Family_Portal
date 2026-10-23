@@ -1,3 +1,11 @@
+## 1.0.47 — Intake / Output history with chart and Printable PDF (needs ERP SQL 278)
+
+For Guests on the nurses' Intake / Output chart, the Overview gets an **Intake / Output** box (today's intake / output since 7 AM and the balance) and a new **Intake / Output** page in the menu:
+- Period filter — Last 7 days / This month / Selected period — with an **Apply** button.
+- Summary boxes (days shown, average intake and output per day, net balance), a bar chart of intake vs output per day, and a day-wise table (7 AM to 7 AM) with the breakdown: Oral (incl. tea / milk / juice), IV, Tube feed; Urine, Drain, Vomit, Stool (count and type).
+- **Print / Save PDF** with the Samara header, Guest details, summary, chart and table.
+No staff names, remarks or alert limits are shown to families. The box and page appear only for Guests on the I/O chart. Run ERP SQL 278_family_portal_io_history.sql first.
+
 ## 1.0.46 — Vitals boxes navigable, Samara pink gradient
 
 The Vitals page boxes (Blood Pressure, Pulse, SpO₂, Blood Sugar) now have the Samara pink gradient used on the nurse screensaver. Tapping a box shows only that reading's history in the table below (the column is highlighted, with a "Show all vitals" button); tapping it again shows everything.
